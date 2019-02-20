@@ -1,0 +1,14 @@
+<additionals>
+    <poi id="POI_0"  type="stop"      color="white"  layer="4.00" lane="edge_0_0_3" pos="1100.00" imgFile="signs/stop.png"      width="3.00" height="3.00"/>
+    <poi id="POI_1"  type="stop"      color="white"  layer="4.00" lane="edge_0_0_2" pos="1100.00" imgFile="signs/stop.png"      width="3.00" height="3.00"/>
+    <poi id="POI_2"  type="stop"      color="white"  layer="4.00" lane="edge_0_0_1" pos="1100.00" imgFile="signs/stop.png"      width="3.00" height="3.00"/>
+    <poi id="POI_3"  type="stop"      color="white"  layer="4.00" lane="edge_0_0_0" pos="1100.00" imgFile="signs/stop.png"      width="3.00" height="3.00"/>
+    <poi id="POI_4"  type="reduce"    color="white"  layer="4.00" lane="edge_0_0_3" pos="800.00"  imgFile="signs/reduce.png"    width="3.00" height="3.00"/>
+    <poi id="POI_5"  type="reduce"    color="white"  layer="4.00" lane="edge_0_0_2" pos="800.00"  imgFile="signs/reduce.png"    width="3.00" height="3.00"/>
+    <poi id="POI_6"  type="reduce"    color="white"  layer="4.00" lane="edge_0_0_1" pos="800.00"  imgFile="signs/reduce.png"    width="3.00" height="3.00"/>
+    <poi id="POI_7"  type="reduce"    color="white"  layer="4.00" lane="edge_0_0_0" pos="800.00"  imgFile="signs/reduce.png"    width="3.00" height="3.00"/>
+    <poi id="POI_8"  type="narrowing" color="yellow" layer="4.00" lane="edge_0_0_3" pos="200.00"  imgFile="signs/narrowing.jpg" width="3.00" height="3.00"/>
+    <poi id="POI_9"  type="narrowing" color="yellow" layer="4.00" lane="edge_0_0_0" pos="200.00"  imgFile="signs/narrowing.jpg" width="3.00" height="3.00"/>
+    <poi id="POI_10" type="triangle"  color="white"  layer="4.00" lane="edge_0_0_3" pos="500.00"  imgFile="signs/triagle.png"   width="3.00" height="3.00"/>
+    <poi id="POI_11" type="triangle"  color="white"  layer="4.00" lane="edge_0_0_0" pos="500.00"  imgFile="signs/triagle.png"   width="3.00" height="3.00"/>    
+</additionals>

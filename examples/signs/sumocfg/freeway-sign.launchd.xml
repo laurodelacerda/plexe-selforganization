@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- debug config -->
+<launch>
+    <basedir path="examples/signs/sumocfg" />
+    <copy file="freeway_sign.net.xml" />
+    <copy file="freeway_sign.rou.xml" />
+    <copy file="freeway_sign.sumo.cfg" type="config" />
+</launch>
