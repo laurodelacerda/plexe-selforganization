@@ -21,6 +21,7 @@
 
 #include "veins/modules/application/platooning/apps/GeneralPlatooningApp.h"
 #include "veins/modules/application/platooning/signs/VehicleCoord.h"
+//#include "veins/modules/application/platooning/signs/TopologyMap.h"
 
 enum class PlatoonManeuver : size_t {
     JOIN_AT_BACK,
@@ -109,6 +110,8 @@ protected:
     int lastSeenRoadSign;
     double timeToRoadSign;
 
+
+//    TopologyMap* topologyMap;
 
 protected:
 

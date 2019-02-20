@@ -21,7 +21,9 @@ Define_Module(SignPlatooningApp);
 
 
 SignPlatooningApp::SignPlatooningApp()
-{}
+{
+//    topologyMap = new TopologyMap(this);
+}
 
 
 void SignPlatooningApp::initialize(int stage)
@@ -95,6 +97,7 @@ void SignPlatooningApp::handleSelfMsg(cMessage* msg)
 void SignPlatooningApp::onPlatoonBeacon(const PlatooningBeacon* pb)
 {
     // TODO Check if message has Extended Beaconing Kind
+    // topology->updateTopology(telemetry);
     updateRoadTopology(pb);
 
     // TODO Check if message is a maneuver to be developed
@@ -116,13 +119,13 @@ void SignPlatooningApp::updateRoadTopology(const PlatooningBeacon* pb) {
     {
         if(lastSeenLane.count(nb_id) == 0) // New node
         {
-            nborCoord[nb_lane].push_back(VehicleCoord(nb_id, nb_lane, Coord(pb->getPositionX(), pb->getPositionY()), nb_len));
+            nborCoord[nb_lane].push_back(VehicleCoord(nb_id, nb_lane, pb->getPositionX(), pb->getPositionY(), nb_len));
         }
         else                               // Known node
         {
             int lastSeenAt = lastSeenLane[nb_id];
             removeVehicleFromLane(nb_id, lastSeenAt); // Remove node from old lane in topology
-            nborCoord[nb_lane].push_back(VehicleCoord(nb_id, nb_lane, Coord(pb->getPositionX(), pb->getPositionY()), nb_len));
+            nborCoord[nb_lane].push_back(VehicleCoord(nb_id, nb_lane, pb->getPositionX(), pb->getPositionY(), nb_len));
         }
 
         lastSeenLane[nb_id] = nb_lane;
@@ -138,12 +141,12 @@ void SignPlatooningApp::updatePosition()
     int lane_index = traciVehicle->getLaneIndex();
 
     if(lastSeenLane.count(myId) == 0)
-        nborCoord[lane_index].push_back(VehicleCoord(myId, lane_index, Coord(data.positionX, data.positionY)));
+        nborCoord[lane_index].push_back(VehicleCoord(myId, lane_index, data.positionX, data.positionY));
     else
     {
         int lastSeenAt = lastSeenLane[myId];
         removeVehicleFromLane(myId, lastSeenAt);
-        nborCoord[lane_index].push_back(VehicleCoord(myId, lane_index, Coord(data.positionX, data.positionY)));
+        nborCoord[lane_index].push_back(VehicleCoord(myId, lane_index, data.positionX, data.positionY));
     }
 
     lastSeenLane[myId] = lane_index;
@@ -625,7 +628,7 @@ void SignPlatooningApp::printRoadTopology(bool sorted)
 
         for (auto &j : nborCoord[i])
         {
-            std::cout << j.getId() << "[" << j.getCoord().x << ", " << j.getLastUpdate() << "] ";
+            std::cout << j.getId() << "[" << j.getCoord().x << ", " << j.getTimestamp() << "] ";
         }
     }
 
