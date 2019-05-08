@@ -13,20 +13,21 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#include "SignPlatooningApp.h"
+#include "SelfOrganizationApp.h"
 
 using namespace Veins;
 
-Define_Module(SignPlatooningApp);
+Define_Module(SelfOrganizationApp);
 
 
-SignPlatooningApp::SignPlatooningApp()
+SelfOrganizationApp::SelfOrganizationApp()
 {
-    topologyMap = new TopologyMap(this);
+    telemetryMap = new TelemetryMap(this);
+    inDanger = false;
 }
 
 
-void SignPlatooningApp::initialize(int stage)
+void SelfOrganizationApp::initialize(int stage)
 {
     GeneralPlatooningApp::initialize(stage);
 
@@ -46,7 +47,7 @@ void SignPlatooningApp::initialize(int stage)
 }
 
 
-SignPlatooningApp::~SignPlatooningApp()
+SelfOrganizationApp::~SelfOrganizationApp()
 {
 
     cancelAndDelete(topologyCheck);
@@ -59,13 +60,13 @@ SignPlatooningApp::~SignPlatooningApp()
 }
 
 
-void SignPlatooningApp::handleSelfMsg(cMessage* msg)
+void SelfOrganizationApp::handleSelfMsg(cMessage* msg)
 {
     if (msg == positionUpdateMsg)
     {
         Plexe::VEHICLE_DATA data;
         traciVehicle->getVehicleData(&data);
-        topologyMap->updatePosition(myId, traciVehicle->getLaneIndex(), data);
+        telemetryMap->updatePosition(myId, traciVehicle->getLaneIndex(), data);
 
         updateFlags();
         scheduleAt(simTime() + SimTime(100, SIMTIME_MS), positionUpdateMsg);
@@ -73,7 +74,7 @@ void SignPlatooningApp::handleSelfMsg(cMessage* msg)
 
     if (msg == topologyCheck)
     {
-//        printInfo();
+        printInfo();
         scheduleAt(simTime() + SimTime(100, SIMTIME_MS) + 1, topologyCheck);
     }
 
@@ -87,10 +88,10 @@ void SignPlatooningApp::handleSelfMsg(cMessage* msg)
 }
 
 
-void SignPlatooningApp::onPlatoonBeacon(const PlatooningBeacon* pb)
+void SelfOrganizationApp::onPlatoonBeacon(const PlatooningBeacon* pb)
 {
     // TODO Check if message has Extended Beaconing Kind
-    topologyMap->updateRoadTopology(pb);
+    telemetryMap->updateRoadTopology(pb);
 
     // TODO Check if message is a maneuver to be developed
 
@@ -99,7 +100,7 @@ void SignPlatooningApp::onPlatoonBeacon(const PlatooningBeacon* pb)
 }
 
 
-void SignPlatooningApp::onRoadSignDetection(std::string sign)
+void SelfOrganizationApp::onRoadSignDetection(std::string sign)
 {
 
     std::string lane_id;
@@ -109,50 +110,55 @@ void SignPlatooningApp::onRoadSignDetection(std::string sign)
     traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLaneIndex", lane_index_str);
     int lane_index = std::atoi(lane_index_str.c_str());
 
-    topologyMap->addRoadSignDetected(sign, lane_index);
+    telemetryMap->addRoadSignDetected(sign, lane_index);
 
     updateFlags();
     startManeuverFormation();
 }
 
 
-void SignPlatooningApp::updateFlags()
+void SelfOrganizationApp::updateFlags()
 {
-    bool lane_safe   = topologyMap->isLaneSafe(myId);
-    bool lane_leader = topologyMap->isLaneLeader(myId);
+
+    bool lane_leader = telemetryMap->isLaneLeader(myId);
+    bool lane_safe   = telemetryMap->isLaneSafe(myId);
 
     if ((lane_leader) && (lane_safe))
     {
         role = PlatoonRole::LEADER;
+        inDanger = false;
         findHost()->getDisplayString().updateWith("r=8,green");
     }
     else if ((lane_leader) && (!lane_safe))
     {
         role = PlatoonRole::UNSAFE_LEADER;
+        inDanger = true;
         findHost()->getDisplayString().updateWith("r=8,red");
     }
     else if ((!lane_leader) && (lane_safe))
     {
-        findHost()->getDisplayString().updateWith("r=8,blue");
         role = PlatoonRole::FOLLOWER;
+        inDanger = false;
+        findHost()->getDisplayString().updateWith("r=8,blue");
     }
     else
     {
-        findHost()->getDisplayString().updateWith("r=0,gray");
         role = PlatoonRole::UNSAFE_FOLLOWER;
+        inDanger = true;
+        findHost()->getDisplayString().updateWith("r=0,gray");
     }
 }
 
 
-void SignPlatooningApp::setupFormation()
+void SelfOrganizationApp::setupFormation()
 {
-    std::vector<int> formation = topologyMap->getFormation(traciVehicle->getLaneIndex());
+    std::vector<int> formation = telemetryMap->getFormation(traciVehicle->getLaneIndex());
 
     positionHelper->setPlatoonFormation(formation);
 }
 
 
-void SignPlatooningApp::startManeuverFormation()
+void SelfOrganizationApp::startManeuverFormation()
 {
    // Enter_Method_Silent();
 
@@ -180,7 +186,7 @@ void SignPlatooningApp::startManeuverFormation()
 }
 
 
-void SignPlatooningApp::startSafeLeaderFormation()
+void SelfOrganizationApp::startSafeLeaderFormation()
 {
     traciVehicle->setCruiseControlDesiredSpeed(50.0 / 3.6);
     traciVehicle->setActiveController(Plexe::ACC);
@@ -195,7 +201,7 @@ void SignPlatooningApp::startSafeLeaderFormation()
 }
 
 
-void SignPlatooningApp::startSafeFollowerFormation()
+void SelfOrganizationApp::startSafeFollowerFormation()
 {
     traciVehicle->setCruiseControlDesiredSpeed(160.0 / 3.6);
     traciVehicle->setActiveController(Plexe::CACC);
@@ -211,20 +217,20 @@ void SignPlatooningApp::startSafeFollowerFormation()
 }
 
 
-void SignPlatooningApp::startUnsafeLeaderFormation()
+void SelfOrganizationApp::startUnsafeLeaderFormation()
 {
 
-    role = PlatoonRole::UNSAFE_LEADER;
-    inManeuver = false;
+//    role = PlatoonRole::UNSAFE_LEADER;
+    setInManeuver(false);
 
-    int safest_lane   = topologyMap->getSafestLaneIndex();
-    int safest_leader = topologyMap->getSafestLaneLeader();
-    bool lane_leader = topologyMap->isLaneLeader(myId);
+    int safest_lane   = telemetryMap->getSafestLaneIndex();
+    int safest_leader = telemetryMap->getSafestLaneLeader();
+    bool lane_leader  = telemetryMap->isLaneLeader(myId);
 
-    bool permission = topologyMap->isSafeToMoveTo(PlatoonManeuver::JOIN_AT_BACK, safest_lane);
+    bool permission = telemetryMap->isSafeToMoveTo(PlatoonManeuver::JOIN_AT_BACK, safest_lane);
 //    std::cout << "Permissão: " << permission << std::endl;
 
-    if (permission && lane_leader)
+    if (permission && lane_leader && inDanger)
     {
         startJoinManeuver(safest_leader, safest_leader, -1);
     }
@@ -232,8 +238,8 @@ void SignPlatooningApp::startUnsafeLeaderFormation()
     {
         Plexe::VEHICLE_DATA data;
         traciVehicle->getVehicleData(&data);
-        traciVehicle->slowDown((data.speed - 1) / 3.6, 0);
-//        traciVehicle->slowDown(30 / 3.6, 0);
+//        traciVehicle->slowDown((data.speed - 1) / 3.6, 0);
+        traciVehicle->slowDown(30 / 3.6, 0);
 
         if (!safeJoinCheck->isScheduled())
             scheduleAt(simTime() + SimTime(500, SIMTIME_MS), safeJoinCheck);
@@ -241,7 +247,7 @@ void SignPlatooningApp::startUnsafeLeaderFormation()
 }
 
 
-void SignPlatooningApp::startUnsafeFollowerFormation()
+void SelfOrganizationApp::startUnsafeFollowerFormation()
 {
 
 //    setPlatoonRole(PlatoonRole::NONE);
@@ -256,26 +262,15 @@ void SignPlatooningApp::startUnsafeFollowerFormation()
     positionHelper->setPlatoonSpeed(30 / 3.6);
     positionHelper->setPlatoonId(positionHelper->getLeaderId());
 
-    if (!safeJoinCheck->isScheduled())
-        scheduleAt(simTime() + SimTime(1000, SIMTIME_MS), safeJoinCheck);
+    bool lane_leader  = telemetryMap->isLaneLeader(myId);
+
+    if (inDanger && !safeJoinCheck->isScheduled() && !lane_leader)
+        scheduleAt(simTime() + SimTime(100, SIMTIME_MS), safeJoinCheck);
 
 }
 
 
-void SignPlatooningApp::printRoadTopology()
-{
-    for (int i = 0; i < 4; i++)
-    {
-        std::cout << "\nLane" << "[" << i << "]: " ;
-
-        std::vector<int> formation = topologyMap->getFormation(i);
-        for (auto &j : formation)
-            std::cout << j << " ";
-    }
-}
-
-
-void SignPlatooningApp::printInfo()
+void SelfOrganizationApp::printInfo()
 {
     std::string role_str ;
 
@@ -292,6 +287,7 @@ void SignPlatooningApp::printInfo()
     else
         role_str = "NONE";
 
+
     std::cout << "\n\n@@@ Vehicle " << myId << " in Platoon " << positionHelper->getPlatoonId() << " at " << simTime() << " @@@"
 //                 << "\n Cruise Model: " << traciVehicle->getActiveController()
 //                 << "\n P Helper id: "  << positionHelper->getId()
@@ -306,8 +302,28 @@ void SignPlatooningApp::printInfo()
 //                 << "\n Headway (s): "  << traciVehicle->getACCHeadwayTime()
 //                 << "\n Spacing (m): "  << traciVehicle->getCACCConstantSpacing()
                  << "\n Platoon Role: " << role_str
-                 << "\n P Length: "     << topologyMap->getPlatoonLength(traciVehicle->getLaneIndex());
+                 << "\n P Length: "     << telemetryMap->getPlatoonLength(traciVehicle->getLaneIndex())
+                 << "\n In Danger: "    << inDanger
+                 << "\n In Maneuver: "  << inManeuver;
 //                 << "\n\n";
-    printRoadTopology();
+
+
+    for (int i = 0; i < 4; i++)
+    {
+        std::cout << "\nLane" << "[" << i << "]: " ;
+
+        std::vector<int> formation = telemetryMap->getFormation(i);
+        for (auto &j : formation)
+            std::cout << j << " ";
+    }
+
+    std::vector<int> blocked_lanes = telemetryMap->getBlockedLanes();
+
+    std::cout << "\nBlocked Lanes: "  ;
+    for (int j = 0; j < blocked_lanes.size(); j++)
+    {
+        std::cout << blocked_lanes.at(j) << " ";
+    }
+
 
 }

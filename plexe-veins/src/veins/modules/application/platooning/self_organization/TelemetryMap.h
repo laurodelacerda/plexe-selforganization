@@ -13,17 +13,17 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#ifndef TOPOLOGYMAP_H_
-#define TOPOLOGYMAP_H_
+#ifndef TELEMETRYMAP_H_
+#define TELEMETRYMAP_H_
 
-class SignPlatooningApp;
+class SelfOrganizationApp;
 
 #include <algorithm>
 #include <vector>
-#include "veins/modules/application/platooning/signs/VehicleCoord.h"
+#include "../self_organization/VehicleCoord.h"
 #include "veins/modules/application/platooning/messages/PlatooningBeacon_m.h"
 
-#include "veins/modules/application/platooning/signs/SignPlatooningApp.h"
+#include "../self_organization/SelfOrganizationApp.h"
 
 // Direction
 enum class Direction : size_t
@@ -62,13 +62,13 @@ enum class SignType : size_t
 };
 
 
-class TopologyMap {
+class TelemetryMap {
 
 public:
 
-    TopologyMap(SignPlatooningApp* app);
+    TelemetryMap(SelfOrganizationApp* app);
 
-    virtual ~TopologyMap();
+    virtual ~TelemetryMap();
 
     // On new beacon, update topology
     void updateRoadTopology(const PlatooningBeacon* pb);
@@ -123,13 +123,22 @@ protected:
     // Sorts topology
     void sortTopology();
 
+
+private:
+
+    void calculatePlatoonSpacing();
+
 private:
 
     // stores direction of current vehicle
     Direction myDirection;
 
-    // stores n'bors' telemetry
+    // stores n'bors' coordinates
     std::vector<VehicleCoord> nborCoord[5];
+
+    // Calculates available spacing of platoon
+    // It will be always number of cars + 1 spaces (counting front and back)
+    std::vector<double> platoon_gaps [5];
 
     // Stores all elected leaders
     std::map<int, int> laneLeaders;
@@ -141,8 +150,8 @@ private:
     std::vector<int> blockedLanes;
 
     // Application
-    SignPlatooningApp* app;
+    SelfOrganizationApp* app;
 
 };
 
-#endif /* TOPOLOGYMAP_H_ */
+#endif /* TELEMETRYMAP_H_ */

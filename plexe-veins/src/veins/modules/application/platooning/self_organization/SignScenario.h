@@ -18,8 +18,8 @@
 #ifndef SIGNSCENARIO_H_
 #define SIGNSCENARIO_H_
 
+#include "SelfOrganizationApp.h"
 #include "veins/modules/application/platooning/scenarios/BaseScenario.h"
-#include "veins/modules/application/platooning/signs/SignPlatooningApp.h"
 
 class SignScenario : public BaseScenario {
 public:
@@ -52,7 +52,7 @@ protected:
 //    cMessage* startManeuver;
 
     // application layer, used to stop the simulation
-    SignPlatooningApp* app;
+    SelfOrganizationApp* app;
 
     static const simsignalwrap_t mobilityStateChangedSignal;
 

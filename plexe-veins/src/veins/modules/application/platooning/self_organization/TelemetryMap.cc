@@ -13,23 +13,23 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#include "TopologyMap.h"
-
+#include "TelemetryMap.h"
+#include "veins/base/utils/Coord.h"
 
 using namespace Veins;
 
 
-TopologyMap::TopologyMap(SignPlatooningApp* app)
+TelemetryMap::TelemetryMap(SelfOrganizationApp* app)
 {
     this->app = app;
 }
 
-TopologyMap::~TopologyMap()
+TelemetryMap::~TelemetryMap()
 {
 
 }
 
-void TopologyMap::updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data)
+void TelemetryMap::updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data)
 {
     VehicleCoord vCoord = VehicleCoord();
     vCoord.fromPlexeData(vehicleId, laneIndex, data);
@@ -52,7 +52,7 @@ void TopologyMap::updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DA
     myDirection = getDirection(vCoord.getAngle());
 }
 
-void TopologyMap::updateRoadTopology(const PlatooningBeacon* pb)
+void TelemetryMap::updateRoadTopology(const PlatooningBeacon* pb)
 {
     int       nb_id   = pb->getVehicleId();
     int       nb_lane = pb->getLaneIndex();
@@ -79,10 +79,52 @@ void TopologyMap::updateRoadTopology(const PlatooningBeacon* pb)
 
         lastSeenLane[nb_id] = nb_lane;
     }
+
 }
 
 
-void TopologyMap::addRoadSignDetected(std::string signType, int lane_index)
+void TelemetryMap::calculatePlatoonSpacing()
+{
+    for(int i = 0; i < (sizeof(nborCoord)/sizeof(nborCoord[0])); i++)
+    {
+        // Number of gaps is equal to number of vehicles plus 1
+        for(int j = 0; j <= nborCoord[i].size() ; j++)
+        {
+            double distance;
+
+            // Compute distances for front and back gaps
+            if ((j == 0) || (j == nborCoord[i].size()))
+            {
+                // get current position
+                Coord currentPosition(nborCoord[i].at(j).getPositionX(), nborCoord[i].at(j).getPositionY(), 0);
+
+                // compute distance
+                // TODO adds platoon default security gap
+                distance = currentPosition.distance(currentPosition) + nborCoord[i].at(j).getLength();
+
+
+            }
+            else
+            {
+                // get front vehicle position
+                Coord frontPosition(nborCoord[i].at(j-1).getPositionX(), nborCoord[i].at(j-1).getPositionY(), 0);
+
+                // get current position
+                Coord currentPosition(nborCoord[i].at(j).getPositionX(), nborCoord[i].at(j).getPositionY(), 0);
+
+                // compute distance
+                // TODO adds platoon default security gap
+                distance = currentPosition.distance(frontPosition) - nborCoord[i].at(j).getLength();
+            }
+
+            platoon_gaps[i].at(j) == distance;
+        }
+    }
+
+}
+
+
+void TelemetryMap::addRoadSignDetected(std::string signType, int lane_index)
 {
     // Adds the constrained lane to container
     // TODO Optimize this: It is currently O(n²), it could be O(n) in std::unordered_set
@@ -106,7 +148,7 @@ void TopologyMap::addRoadSignDetected(std::string signType, int lane_index)
 }
 
 
-bool TopologyMap::isSafeToMoveTo(PlatoonManeuver maneuver, int laneIndex)
+bool TelemetryMap::isSafeToMoveTo(PlatoonManeuver maneuver, int laneIndex)
 {
     double platoon_dist;
 
@@ -124,7 +166,7 @@ bool TopologyMap::isSafeToMoveTo(PlatoonManeuver maneuver, int laneIndex)
 }
 
 
-int TopologyMap::convertAngleToDegrees(double angleRad)
+int TelemetryMap::convertAngleToDegrees(double angleRad)
 {
     double angleDeg;
 
@@ -137,7 +179,7 @@ int TopologyMap::convertAngleToDegrees(double angleRad)
     return angleDeg;
 }
 
-Direction TopologyMap::getDirection(double angleRad)
+Direction TelemetryMap::getDirection(double angleRad)
 {
     int angleDeg = convertAngleToDegrees(angleRad);
 
@@ -169,7 +211,7 @@ Direction TopologyMap::getDirection(double angleRad)
     return direction;
 }
 
-void TopologyMap::removeVehicleFromLane(int vehicleId, int laneIndex)
+void TelemetryMap::removeVehicleFromLane(int vehicleId, int laneIndex)
 {
     for (auto it = nborCoord[laneIndex].begin(); it != nborCoord[laneIndex].end(); )
     {
@@ -201,7 +243,7 @@ bool comparePosWestA (VehicleCoord a, VehicleCoord b)
     return (a.getCoord().x < b.getCoord().x);
 }
 
-void TopologyMap::sortTopology()
+void TelemetryMap::sortTopology()
 {
     for(int i = 0; i < (sizeof(nborCoord)/sizeof(nborCoord[0])); i++)
     {
@@ -217,7 +259,7 @@ void TopologyMap::sortTopology()
 }
 
 
-double TopologyMap::getPlatoonLength(int laneIndex)
+double TelemetryMap::getPlatoonLength(int laneIndex)
 {
     double leaderPos;
     double tailPos;
@@ -252,7 +294,7 @@ double TopologyMap::getPlatoonLength(int laneIndex)
 
 }
 
-double TopologyMap::distanceFromPlatoonTail(int laneIndex)
+double TelemetryMap::distanceFromPlatoonTail(int laneIndex)
 {
     int platoon_size = nborCoord[laneIndex].size();
 
@@ -275,13 +317,13 @@ double TopologyMap::distanceFromPlatoonTail(int laneIndex)
     }
 }
 
-VehicleCoord TopologyMap::getVehicleTopologyInfo(int laneIndex, int position)
+VehicleCoord TelemetryMap::getVehicleTopologyInfo(int laneIndex, int position)
 {
     // WARNING Verificar se é uma lane trafegável
     return nborCoord[laneIndex].at(position);
 }
 
-bool TopologyMap::isLaneSafe(int vehicleId)
+bool TelemetryMap::isLaneSafe(int vehicleId)
 {
     if (std::find(blockedLanes.begin(), blockedLanes.end(), lastSeenLane[vehicleId]) != blockedLanes.end())
         return false;
@@ -289,7 +331,7 @@ bool TopologyMap::isLaneSafe(int vehicleId)
         return true;
 }
 
-bool TopologyMap::isLaneLeader(int vehicleId)
+bool TelemetryMap::isLaneLeader(int vehicleId)
 {
     int lane_index = app->getCurrentLaneIndex();
 
@@ -311,7 +353,7 @@ bool TopologyMap::isLaneLeader(int vehicleId)
         return false;
 }
 
-int TopologyMap::getSafestLaneIndex()
+int TelemetryMap::getSafestLaneIndex()
 {
     int current_lane = app->getCurrentLaneIndex();
 
@@ -346,12 +388,12 @@ int TopologyMap::getSafestLaneIndex()
 }
 
 
-int TopologyMap::getSafestLaneLeader()
+int TelemetryMap::getSafestLaneLeader()
 {
     nborCoord[this->getSafestLaneIndex()].at(0).getId();
 }
 
-std::vector<int> TopologyMap::getFormation(int laneIndex)
+std::vector<int> TelemetryMap::getFormation(int laneIndex)
 {
     std::vector<int> formation;
 
@@ -365,7 +407,7 @@ std::vector<int> TopologyMap::getFormation(int laneIndex)
     return formation;
 }
 
-std::vector<int> TopologyMap::getLaneLeaders()
+std::vector<int> TelemetryMap::getLaneLeaders()
 {
     std::vector<int> leader_list;
 
@@ -374,7 +416,8 @@ std::vector<int> TopologyMap::getLaneLeaders()
     return leader_list;
 }
 
-std::vector<int> TopologyMap::getBlockedLanes()
+std::vector<int> TelemetryMap::getBlockedLanes()
 {
     return blockedLanes;
 }
+

@@ -15,7 +15,7 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
 
-#include "veins/modules/application/platooning/signs/SignScenario.h"
+#include "../self_organization/SignScenario.h"
 
 using namespace Veins;
 
@@ -31,7 +31,7 @@ void SignScenario::initialize(int stage)
     lastSignId = "";
 
     if (stage == 1) {
-        app = FindModule<SignPlatooningApp*>::findSubModule(getParentModule());
+        app = FindModule<SelfOrganizationApp*>::findSubModule(getParentModule());
 //        prepareManeuverCars(0);
 
         findHost()->subscribe(mobilityStateChangedSignal, this);

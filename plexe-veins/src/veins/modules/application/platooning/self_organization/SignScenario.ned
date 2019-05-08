@@ -15,7 +15,7 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
 
-package org.car2x.veins.modules.application.platooning.signs;
+package org.car2x.veins.modules.application.platooning.self_organization;
 
 import org.car2x.veins.modules.application.platooning.scenarios.BBaseScenario;
 

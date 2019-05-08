@@ -13,31 +13,31 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#ifndef SIGNPLATOONINGAPP_H_
-#define SIGNPLATOONINGAPP_H_
+#ifndef SELFORGANIZATIONAPP_H_
+#define SELFORGANIZATIONAPP_H_
 
 #include <algorithm>
 #include <memory>
 
+#include "../self_organization/VehicleCoord.h"
+#include "TelemetryMap.h"
 #include "veins/modules/application/platooning/apps/GeneralPlatooningApp.h"
-#include "veins/modules/application/platooning/signs/VehicleCoord.h"
+#include "veins/modules/application/platooning/self_organization/TelemetryMap.h"
 
-#include "veins/modules/application/platooning/signs/TopologyMap.h"
-
-class TopologyMap;
+class TelemetryMap;
 
 
 
-class SignPlatooningApp : public GeneralPlatooningApp {
+class SelfOrganizationApp : public GeneralPlatooningApp {
 
 public:
 
-    SignPlatooningApp();
+    SelfOrganizationApp();
 
     /** override from GeneralPlatooningApp */
     virtual void initialize(int stage);
 
-    virtual ~SignPlatooningApp();
+    virtual ~SelfOrganizationApp();
 
     // Decides what to do when a road sign is detected
     void onRoadSignDetection(std::string sign);
@@ -53,6 +53,13 @@ public:
         return myId;
     }
 
+    bool isInDanger() const {
+        return inDanger;
+    }
+
+    void setInDanger(bool inDanger) {
+        this->inDanger = inDanger;
+    }
 
 protected:
 
@@ -69,7 +76,9 @@ protected:
     cMessage* positionUpdateMsg;
 
     // Map of platoon topology
-    TopologyMap* topologyMap;
+    TelemetryMap* telemetryMap;
+
+    bool inDanger;
 
 protected:
 
@@ -110,12 +119,9 @@ protected:
     // TODO Transfer this class to maneuver class
     void startUnsafeFollowerFormation();
 
-    // Prints current road topology
-    virtual void printRoadTopology();
-
-    // prints info about current vehicle
+    // prints info about current vehicle and topology
     void printInfo();
 
 };
 
-#endif /* SIGNPLATOONINGAPP_H_ */
+#endif /* SELFORGANIZATIONAPP_H_ */
