@@ -23,8 +23,6 @@
 #include "veins/modules/mobility/traci/TraCIColor.h"
 #include "veins/modules/mobility/traci/TraCIScenarioManager.h"
 
-#include "veins/modules/application/platooning/signs/JoinAtBackSign.h"
-
 using namespace Veins;
 
 Define_Module(GeneralPlatooningApp);
@@ -37,13 +35,11 @@ void GeneralPlatooningApp::initialize(int stage)
         // connect maneuver application to protocol
         protocol->registerApplication(MANEUVER_TYPE, gate("lowerLayerIn"), gate("lowerLayerOut"), gate("lowerControlIn"), gate("lowerControlOut"));
 
-        std::string joinManeuverName = par("joinManeuver").stdstringValue();
-        if (joinManeuverName == "JoinAtBack")
-            joinManeuver = new JoinAtBack(this);
-        else if (joinManeuverName == "JoinAtBackSign")
-            joinManeuver = new JoinAtBackSign(this);
-        else
-            throw new cRuntimeError("Invalid join maneuver implementation chosen");
+//        std::string joinManeuverName = par("joinManeuver").stdstringValue();
+//        if (joinManeuverName == "JoinAtBack")
+//            joinManeuver = new JoinAtBack(this);
+//        else
+//            throw new cRuntimeError("Invalid join maneuver implementation chosen");
     }
 }
 
@@ -54,15 +50,18 @@ bool GeneralPlatooningApp::isJoinAllowed() const
 
 void GeneralPlatooningApp::startJoinManeuver(int platoonId, int leaderId, int position)
 {
-    ASSERT(getPlatoonRole() == PlatoonRole::NONE || getPlatoonRole() == PlatoonRole::UNSAFE_FOLLOWER || getPlatoonRole() == PlatoonRole::UNSAFE_LEADER);
-    ASSERT(!isInManeuver());
+//    ASSERT(getPlatoonRole() == PlatoonRole::NONE);
+//    ASSERT(!isInManeuver());
 
-    JoinManeuverParameters params;
-    params.platoonId = platoonId;
-    params.leaderId = leaderId;
-    params.position = position;
-    joinManeuver->startManeuver(&params);
+//    JoinManeuverParameters params;
+//    params.platoonId = platoonId;
+//    params.leaderId = leaderId;
+//    params.position = position;
+//    joinManeuver->startManeuver(&params);
 }
+
+void GeneralPlatooningApp::abortJoinManeuver()
+{}
 
 void GeneralPlatooningApp::sendUnicast(cPacket* msg, int destination)
 {
@@ -119,14 +118,14 @@ void GeneralPlatooningApp::setPlatoonRole(PlatoonRole r)
 
 void GeneralPlatooningApp::onPlatoonBeacon(const PlatooningBeacon* pb)
 {
-    joinManeuver->onPlatoonBeacon(pb);
+//    joinManeuver->onPlatoonBeacon(pb);
     // maintain platoon
     BaseApp::onPlatoonBeacon(pb);
 }
 
 void GeneralPlatooningApp::onManeuverMessage(ManeuverMessage* mm)
 {
-    joinManeuver->onManeuverMessage(mm);
+//    joinManeuver->onManeuverMessage(mm);
     delete mm;
 }
 
@@ -154,5 +153,5 @@ UpdatePlatoonFormation* GeneralPlatooningApp::createUpdatePlatoonFormation(int v
 
 GeneralPlatooningApp::~GeneralPlatooningApp()
 {
-    delete joinManeuver;
+//    delete joinManeuver;
 }

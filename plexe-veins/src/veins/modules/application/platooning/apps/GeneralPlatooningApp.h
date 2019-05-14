@@ -23,22 +23,15 @@
 #include <memory>
 
 #include "veins/modules/application/platooning/apps/BaseApp.h"
-#include "veins/modules/application/platooning/maneuver/JoinManeuver.h"
-#include "veins/modules/application/platooning/maneuver/JoinAtBack.h"
+//#include "veins/modules/application/platooning/maneuver/JoinManeuver.h"
+//#include "veins/modules/application/platooning/maneuver/JoinAtBack.h"
 
 #include "veins/modules/application/platooning/messages/ManeuverMessage_m.h"
+#include "veins/modules/application/platooning/messages/UpdatePlatoonFormation_m.h"
 
 #include "veins/modules/mobility/traci/TraCIConstants.h"
 
-/** possible roles of this vehicle */
-enum class PlatoonRole : size_t {
-    NONE, ///< The vehicle is not in a Platoon
-    LEADER, ///< The vehicle is the leader of its Platoon
-    FOLLOWER, ///< The vehicle is a normal follower in its Platoon
-    JOINER, ///< The vehicle is in the process of joining a Platoon
-    UNSAFE_LEADER, ///< O veículo está em localização não segura e na liderança de seu pelotão
-    UNSAFE_FOLLOWER ///< O veículo está em localização não segura e um seguidor de seu pelotão
-};
+#include "veins/modules/application/platooning/apps/PlatoonDefs.h"
 
 /**
  * General purpose application for Platoons
@@ -62,7 +55,7 @@ public:
     GeneralPlatooningApp()
         : inManeuver(false)
         , role(PlatoonRole::NONE)
-        , joinManeuver(nullptr)
+//        , joinManeuver(nullptr)
     {
     }
 
@@ -98,10 +91,10 @@ public:
      * @param int position the position where the vehicle should join.
      * Depending on the implementation, this parameter might be ignored
      */
-    void startJoinManeuver(int platoonId, int leaderId, int position);
+    virtual void startJoinManeuver(int platoonId, int leaderId, int position);
 
     /** Abort join maneuver */
-    void abortJoinManeuver();
+    virtual void abortJoinManeuver();
 
     /**
      * Returns whether this car is in a maneuver
@@ -200,15 +193,11 @@ protected:
     /** am i in a maneuver? */
     bool inManeuver;
 
-    bool safeToManeuver;
-
-//private:
-protected:
-
     /** the role of this vehicle */
     PlatoonRole role;
-    /** join maneuver implementation */
-    JoinManeuver* joinManeuver;
+
+//    /** join maneuver implementation */
+//    JoinManeuver* joinManeuver;
 };
 
 #endif

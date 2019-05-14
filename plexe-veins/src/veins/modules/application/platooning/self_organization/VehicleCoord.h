@@ -98,6 +98,16 @@ struct VehicleCoord
         return vehicleAngle;
     }
 
+    double getPositionX() const
+    {
+        return vehicleCoord.x;
+    }
+
+    double getPositionY() const
+    {
+        return vehicleCoord.y;
+    }
+
 };
 
 #endif /* SRC_VEINS_MODULES_APPLICATION_PLATOONING_UTILITIES_VEHICLECOORD_H_ */

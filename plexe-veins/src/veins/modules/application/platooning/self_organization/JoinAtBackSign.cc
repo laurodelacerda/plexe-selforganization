@@ -13,7 +13,8 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
 
-#include "veins/modules/application/platooning/signs/JoinAtBackSign.h"
+#include "../self_organization/JoinAtBackSign.h"
+
 #include "veins/modules/application/platooning/apps/GeneralPlatooningApp.h"
 
 JoinAtBackSign::JoinAtBackSign(GeneralPlatooningApp* app)
@@ -37,7 +38,7 @@ void JoinAtBackSign::startManeuver(const void* parameters)
     {
         // Veículos que são líderes não podem realizar manobras, o que não faz sentido no caso
         // NOTE Retirar para testes com veículos momentaneamente líderes de suas faixas
-//        ASSERT(app->getPlatoonRole() == PlatoonRole::NONE);
+        ASSERT((app->getPlatoonRole() == PlatoonRole::NONE) || (app->getPlatoonRole() == PlatoonRole::UNSAFE_LEADER));
 
         ASSERT(!app->isInManeuver());
 
@@ -66,8 +67,8 @@ void JoinAtBackSign::onPlatoonBeacon(const PlatooningBeacon* pb)
     if (joinManeuverState == JoinManeuverState::J_MOVE_IN_POSITION) {
             // check correct role
 
-    //        PlatoonRole role = app->getPlatoonRole();
-    //        ASSERT(app->getPlatoonRole() == PlatoonRole::JOINER);
+//            PlatoonRole role = app->getPlatoonRole();
+//            ASSERT(app->getPlatoonRole() == PlatoonRole::JOINER);
 
             // if the message comes from the leader
             if (pb->getVehicleId() == targetPlatoonData->newFormation.at(0)) {
@@ -217,7 +218,8 @@ void JoinAtBackSign::handleMoveToPositionAck(const MoveToPositionAck* msg)
 
 void JoinAtBackSign::handleJoinFormation(const JoinFormation* msg)
 {
-    if (app->getPlatoonRole() != PlatoonRole::JOINER) return;
+    // NOTE Alterado para aceitar veículos que entram no pelotão e passam a ser "FOLLOWER"
+//    if ((app->getPlatoonRole() != PlatoonRole::JOINER) || app->getPlatoonRole() != PlatoonRole::FOLLOWER) return;
     if (joinManeuverState != JoinManeuverState::J_WAIT_JOIN) return;
     if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
     if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
@@ -252,6 +254,7 @@ void JoinAtBackSign::handleJoinFormation(const JoinFormation* msg)
 
 void JoinAtBackSign::handleJoinFormationAck(const JoinFormationAck* msg)
 {
+
     if (app->getPlatoonRole() != PlatoonRole::LEADER) return;
     if (joinManeuverState != JoinManeuverState::L_WAIT_JOINER_TO_JOIN) return;
     if (msg->getPlatoonId() != positionHelper->getPlatoonId()) return;

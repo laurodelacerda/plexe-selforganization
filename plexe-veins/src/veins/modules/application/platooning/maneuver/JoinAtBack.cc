@@ -31,7 +31,8 @@ void JoinAtBack::startManeuver(const void* parameters)
 
         // Veículos que são líderes não podem realizar manobras, o que não faz sentido no caso
         // NOTE Retirar para testes com veículos momentaneamente líderes de suas faixas
-        ASSERT(app->getPlatoonRole() == PlatoonRole::NONE);
+//        ASSERT(app->getPlatoonRole() == PlatoonRole::NONE);
+        ASSERT((app->getPlatoonRole() == PlatoonRole::NONE) || (app->getPlatoonRole() == PlatoonRole::UNSAFE_LEADER));
 
         ASSERT(!app->isInManeuver());
 
@@ -43,7 +44,6 @@ void JoinAtBack::startManeuver(const void* parameters)
         targetPlatoonData->platoonId = pars->platoonId;
         targetPlatoonData->platoonLeader = pars->leaderId;
 
-        // send join request to leader
         JoinPlatoonRequest* req = createJoinPlatoonRequest(positionHelper->getId(), positionHelper->getExternalId(), targetPlatoonData->platoonId, targetPlatoonData->platoonLeader, traciVehicle->getLaneIndex(), mobility->getCurrentPosition().x, mobility->getCurrentPosition().y);
         app->sendUnicast(req, targetPlatoonData->platoonLeader);
         joinManeuverState = JoinManeuverState::J_WAIT_REPLY;

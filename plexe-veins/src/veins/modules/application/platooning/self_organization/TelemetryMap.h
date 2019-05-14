@@ -16,70 +16,44 @@
 #ifndef TELEMETRYMAP_H_
 #define TELEMETRYMAP_H_
 
-class SelfOrganizationApp;
+class BaseSelfOrganizationApp;
 
 #include <algorithm>
 #include <vector>
 #include "../self_organization/VehicleCoord.h"
 #include "veins/modules/application/platooning/messages/PlatooningBeacon_m.h"
 
-#include "../self_organization/SelfOrganizationApp.h"
-
-// Direction
-enum class Direction : size_t
-{
-    NONE,
-    NORTH,
-    SOUTH,
-    WEST,
-    EAST,
-    NORTHWEST, // TODO Implement this
-    SOUTHWEST, // TODO Implement this
-    NORTHEAST, // TODO Implement this
-    SOUTHEAST  // TODO Implement this
-};
-
-// Platoon Maneuvers
-enum class PlatoonManeuver : size_t
-{
-    JOIN_AT_BACK,
-    JOIN_AT_FRONT,
-    JOIN_IN_THE_MIDDLE,
-    SPLIT,
-    MERGE,
-    MULTIPLE_JOIN_AT_BACK,
-    MULTIPLE_JOIN_AT_FRONT,
-    MULTIPLE_JOIN_IN_THE_MIDDLE
-};
-
-//     Road Signs or Constraints
-enum class SignType : size_t
-{
-    NARROW,
-    TRIANGLE,
-    STOP,
-    REDUCE
-};
+#include "veins/modules/application/platooning/apps/PlatoonDefs.h"
 
 
+/**
+ * Stores geographic position of vehicles in surroundings
+ * Only safe-lane leaders have the permission to access this information.
+ */
 class TelemetryMap {
 
 public:
 
-    TelemetryMap(SelfOrganizationApp* app);
+    // @author lauro
+    // TODO Remover necessidade de parâmetro app pois mapa de telemetria
+    // deve existir independente de aplicação e se manter apenas com dados
+    // de mensagens
+    TelemetryMap(BaseSelfOrganizationApp* app);
 
     virtual ~TelemetryMap();
 
-    // On new beacon, update topology
-    void updateRoadTopology(const PlatooningBeacon* pb);
+    // On new beacon, update telemetry map
+    void updateTelemetryMap(const PlatooningBeacon* pb);
 
     // On new info of the current vehicle
-    void updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data);
+    void updateMyPosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data);
 
     // Adds a road sign detected
-    void addRoadSignDetected(std::string signType, int laneIndex /*, Coord pos*/);
+    void addRoadSignDetected(std::string signType, int laneIndex, double range /*, Coord pos*/);
 
     // Detects if a maneuver is possible to be executed in a given lane
+    // TODO Alterar o método para o seguinte
+    // bool isSafeToMoveTo(int platoonId, int position);
     bool isSafeToMoveTo(PlatoonManeuver maneuver, int laneIndex);
 
     // Detects the length of the platoon
@@ -150,7 +124,7 @@ private:
     std::vector<int> blockedLanes;
 
     // Application
-    SelfOrganizationApp* app;
+    BaseSelfOrganizationApp* app;
 
 };
 

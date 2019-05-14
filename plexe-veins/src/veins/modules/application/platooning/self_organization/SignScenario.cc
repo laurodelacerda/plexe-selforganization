@@ -109,24 +109,33 @@ void SignScenario::prepareManeuverCars(int platoonLane)
 
 void SignScenario::receiveSignal(cComponent* source, simsignal_t signalID, cObject* obj, cObject* details)
 {
-    std::string signId;
-    std::string shape;
+    std::string sign_id;
+    std::string sign_type;
+    std::string lane_id;
+    int         lane_index;
+    double      sign_range;
 
     Enter_Method_Silent();
 
     /// TODO Maybe emit a signal when a road sign is perceived
     if (signalID == mobilityStateChangedSignal)
     {
-//        traciVehicle->getCustomParameter("has.signDetector.device", device);
-//        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLane", lane);
-//        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignShape", shape);
-        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignId", signId);
+        std::string lane_index_str;
+        std::string range_str;
 
+        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignId", sign_id);
+        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignShape", sign_type);
+        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLane", lane_id);
+        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLaneIndex", lane_index_str);
+        traciVehicle->getCustomParameter("device.signDetector.range", range_str);
 
-        if (lastSignId != signId)
+        lane_index = std::atoi(lane_index_str.c_str());
+        sign_range = std::atof(range_str.c_str());
+
+        if (lastSignId != sign_id)
         {
-            lastSignId = signId;
-            app->onRoadSignDetection(shape);
+            lastSignId = sign_id;
+            app->onRoadSignDetection(sign_id, sign_type, lane_index, sign_range);
         }
     }
 }

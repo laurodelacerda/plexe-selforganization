@@ -14,12 +14,13 @@
 // 
 
 #include "TelemetryMap.h"
+#include "BaseSelfOrganizationApp.h"
 #include "veins/base/utils/Coord.h"
 
 using namespace Veins;
 
 
-TelemetryMap::TelemetryMap(SelfOrganizationApp* app)
+TelemetryMap::TelemetryMap(BaseSelfOrganizationApp* app)
 {
     this->app = app;
 }
@@ -29,7 +30,44 @@ TelemetryMap::~TelemetryMap()
 
 }
 
-void TelemetryMap::updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data)
+
+void TelemetryMap::updateTelemetryMap(const PlatooningBeacon* pb)
+{
+    VehicleCoord vCoord = VehicleCoord();
+    vCoord.fromPacket(pb);
+
+    int       nb_id   = pb->getVehicleId();
+    int       nb_lane = pb->getLaneIndex();
+    Direction nb_head = getDirection(pb->getAngle());
+
+    // TODO Recuperar informação do struct
+//    int       nb_id   = vCoord->getId();
+//    int       nb_lane = vCoord->getLaneIndex();
+//    Direction nb_head = getDirection(VCoord->getAngle());
+
+    int lastSeenAt;
+
+    // n'bors at some lane Direction to the same direction
+    if ((nb_lane != -1) && (myDirection == nb_head))
+    {
+        if(lastSeenLane.count(nb_id) == 0) // New node
+        {
+            nborCoord[nb_lane].push_back(vCoord);
+        }
+        else                               // Known node
+        {
+            lastSeenAt = lastSeenLane[nb_id];
+            removeVehicleFromLane(nb_id, lastSeenAt); // Remove node from old lane in topology
+            nborCoord[nb_lane].push_back(vCoord);
+        }
+
+        lastSeenLane[nb_id] = nb_lane;
+    }
+
+}
+
+
+void TelemetryMap::updateMyPosition(int vehicleId, int laneIndex, Plexe::VEHICLE_DATA& data)
 {
     VehicleCoord vCoord = VehicleCoord();
     vCoord.fromPlexeData(vehicleId, laneIndex, data);
@@ -51,37 +89,6 @@ void TelemetryMap::updatePosition(int vehicleId, int laneIndex, Plexe::VEHICLE_D
 
     myDirection = getDirection(vCoord.getAngle());
 }
-
-void TelemetryMap::updateRoadTopology(const PlatooningBeacon* pb)
-{
-    int       nb_id   = pb->getVehicleId();
-    int       nb_lane = pb->getLaneIndex();
-    Direction nb_head = getDirection(pb->getAngle());
-
-    int lastSeenAt;
-
-    VehicleCoord vCoord = VehicleCoord();
-    vCoord.fromPacket(pb);
-
-    // n'bors at some lane Direction to the same direction
-    if ((nb_lane != -1) && (myDirection == nb_head))
-    {
-        if(lastSeenLane.count(nb_id) == 0) // New node
-        {
-            nborCoord[nb_lane].push_back(vCoord);
-        }
-        else                               // Known node
-        {
-            lastSeenAt = lastSeenLane[nb_id];
-            removeVehicleFromLane(nb_id, lastSeenAt); // Remove node from old lane in topology
-            nborCoord[nb_lane].push_back(vCoord);
-        }
-
-        lastSeenLane[nb_id] = nb_lane;
-    }
-
-}
-
 
 void TelemetryMap::calculatePlatoonSpacing()
 {
@@ -124,12 +131,13 @@ void TelemetryMap::calculatePlatoonSpacing()
 }
 
 
-void TelemetryMap::addRoadSignDetected(std::string signType, int lane_index)
+void TelemetryMap::addRoadSignDetected(std::string signType, int lane_index, double range)
 {
     // Adds the constrained lane to container
     // TODO Optimize this: It is currently O(n²), it could be O(n) in std::unordered_set
     if (std::find(blockedLanes.begin(), blockedLanes.end(), lane_index) == blockedLanes.end())
         blockedLanes.push_back(lane_index);
+//        std::cout << "Sign " << signType << " detected at lane " << lane_index << " from a distance of " << range << " meters." << std::endl;
 
 
     // List of all possible road constraints

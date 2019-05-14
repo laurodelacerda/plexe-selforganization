@@ -16,8 +16,8 @@
 #ifndef JOINATBACKSIGN_H_
 #define JOINATBACKSIGN_H_
 
+#include "BaseSelfOrganizationApp.h"
 #include "veins/modules/application/platooning/maneuver/JoinAtBack.h"
-#include "veins/modules/application/platooning/signs/SignPlatooningApp.h"
 
 using namespace Veins;
 

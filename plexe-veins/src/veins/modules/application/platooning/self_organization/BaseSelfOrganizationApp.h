@@ -13,34 +13,63 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#ifndef SELFORGANIZATIONAPP_H_
-#define SELFORGANIZATIONAPP_H_
+#ifndef BASESELFORGANIZATIONAPP_H_
+#define BASESELFORGANIZATIONAPP_H_
 
-#include <algorithm>
-#include <memory>
-
-#include "../self_organization/VehicleCoord.h"
-#include "TelemetryMap.h"
+#include <cfloat>
 #include "veins/modules/application/platooning/apps/GeneralPlatooningApp.h"
+#include "veins/modules/application/platooning/self_organization/VehicleCoord.h"
 #include "veins/modules/application/platooning/self_organization/TelemetryMap.h"
 
-class TelemetryMap;
 
-
-
-class SelfOrganizationApp : public GeneralPlatooningApp {
+/**
+ * General purpose application for Self-Organizing Platoons
+ * This module is focused on interaction (by generating communication among vehicles)
+ * and road sign detection.
+ *
+ * @see BaseApp
+ * @see Maneuver
+ */
+class BaseSelfOrganizationApp : public GeneralPlatooningApp {
 
 public:
 
-    SelfOrganizationApp();
+    /** c'tor for BaseSelfOrganizationApp */
+    BaseSelfOrganizationApp()
+        : map(nullptr),
+          inDanger(false)
+    {
+    }
 
-    /** override from GeneralPlatooningApp */
+    /** d'tor for BaseSelfOrganizationApp */
+    virtual ~BaseSelfOrganizationApp();
+
     virtual void initialize(int stage);
 
-    virtual ~SelfOrganizationApp();
+//    void setPlatoonFormation(const std::vector<int>& f)
+//    {
+//        positionHelper->setPlatoonFormation(f);
+//    }
+
+
+
+//    int getPlatoonId()
+//    {
+//        return positionHelper->getPlatoonId();
+//    }
+//
+//    int getLeaderId()
+//    {
+//        return positionHelper->getLeaderId();
+//    }
+
 
     // Decides what to do when a road sign is detected
-    void onRoadSignDetection(std::string sign);
+    void onRoadSignDetection(std::string sign_id, std::string sign_type, int lane_index, double range);
+
+    // Monitors vehicle status in relation to road signs
+    void onRoadSignTracking();
+
 
 
     int getCurrentLaneIndex()
@@ -61,6 +90,43 @@ public:
         this->inDanger = inDanger;
     }
 
+
+protected:
+
+    // Detect self events
+    virtual void handleSelfMsg(cMessage* msg);
+
+    /** override from GeneralPlatooningApp */
+    virtual void onPlatoonBeacon(const PlatooningBeacon* pb) override;
+
+    // Update lane leadership and safety flags
+    void updateFlags();
+
+
+    // Platoon Formation
+
+    // Update Platoon Formation
+    virtual void setupFormation(){}
+
+    // Set Platoon Formation after road sign detection
+    virtual void startManeuverFormation(){}
+
+    // Start safe leader movements
+    virtual void startSafeLeaderFormation(){}
+
+    // Start unsafe leader movements
+    virtual void startUnsafeLeaderFormation(){}
+
+    // Start safe follower movements
+    virtual void startSafeFollowerFormation(){}
+
+    // Start unsafe follower movements
+    virtual void startUnsafeFollowerFormation(){}
+
+    // prints info about current vehicle and topology
+    void printInfo();
+
+
 protected:
 
     // Topology print event
@@ -75,53 +141,17 @@ protected:
     // Telemetry update event
     cMessage* positionUpdateMsg;
 
+    cMessage* signCheck;
+
+    double alert_distance;
+
+    std::vector<std::string> road_signs;
+
     // Map of platoon topology
-    TelemetryMap* telemetryMap;
+    TelemetryMap* map;
 
     bool inDanger;
 
-protected:
-
-
-    // Events
-
-    // Detect self events
-    virtual void handleSelfMsg(cMessage* msg);
-
-    /** override from GeneralPlatooningApp */
-    virtual void onPlatoonBeacon(const PlatooningBeacon* pb);
-
-    // Update leadership and safety lane flags
-    void updateFlags();
-
-
-    // Platoon Formation
-
-    // Update Platoon Formation
-    void setupFormation();
-
-    // Set Platoon Formation after road sign detection
-    void startManeuverFormation();
-
-    // Start safe leader movements
-    // TODO Transfer this class to maneuver class
-    void startSafeLeaderFormation();
-
-    // Start unsafe leader movements
-    // TODO Transfer this class to maneuver class
-    void startUnsafeLeaderFormation();
-
-    // Start safe follower movements
-    // TODO Transfer this class to maneuver class
-    void startSafeFollowerFormation();
-
-    // Start unsafe follower movements
-    // TODO Transfer this class to maneuver class
-    void startUnsafeFollowerFormation();
-
-    // prints info about current vehicle and topology
-    void printInfo();
-
 };
 
-#endif /* SELFORGANIZATIONAPP_H_ */
+#endif /* BASESELFORGANIZATIONAPP_H_ */

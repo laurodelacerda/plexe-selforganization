@@ -13,12 +13,12 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-package org.car2x.veins.modules.application.platooning.signs;
+package org.car2x.veins.modules.application.platooning.self_organization;
 
-import org.car2x.veins.modules.application.platooning.apps.GeneralPlatooningApp;
+import org.car2x.veins.modules.application.platooning.self_organization.BaseSelfOrganizationApp;
 
-simple SignPlatooningApp extends GeneralPlatooningApp
-{    
+simple SelfOrganizationApp extends BaseSelfOrganizationApp
+{       
     @display("i=block/app2");
-    @class(SignPlatooningApp);
+    @class(SelfOrganizationApp);
 }
