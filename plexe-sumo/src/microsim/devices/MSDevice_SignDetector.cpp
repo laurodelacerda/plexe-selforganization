@@ -230,6 +230,9 @@ MSDevice_SignDetector::getParameter(const std::string& key) const
     else if (key == "lastRoadSignLaneIndex"){
         return toString(lastRoadSignLaneIndex);
     }
+    else if (key == "range"){
+        return toString(myRange);
+    }
     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
 }
 
