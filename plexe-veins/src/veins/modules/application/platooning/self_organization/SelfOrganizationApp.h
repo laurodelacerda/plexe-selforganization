@@ -13,15 +13,19 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-#ifndef MANEUVERMANAGER_H_
-#define MANEUVERMANAGER_H_
+#ifndef SELFORGANIZATIONAPP_H_
+#define SELFORGANIZATIONAPP_H_
 
 #include "BaseSelfOrganizationApp.h"
-//#include "veins/modules/mobility/traci/TraCIMobility.h"
 
 #include "veins/modules/application/platooning/maneuver/JoinManeuver.h"
-#include "veins/modules/application/platooning/maneuver/JoinAtBack.h"
-#include "veins/modules/application/platooning/self_organization/JoinAtBackSign.h"
+#include "veins/modules/application/platooning/maneuver/DynamicJoin.h"
+
+// Timers to adapt longitudinal position
+#define TIMER_JOIN_AT_BACK       100
+#define TIMER_JOIN_AT_FRONT      100
+#define TIMER_JOIN_IN_THE_MIDDLE 100
+
 
 /**
  * Defines maneuvers strategies based on existing gaps to self-organize vehicles in a Platoon
@@ -31,9 +35,8 @@ class SelfOrganizationApp : public BaseSelfOrganizationApp {
 public:
 
     SelfOrganizationApp()
-    :   maneuverInCourse(PlatoonManeuver::NONE)
     {
-        joinManeuver = nullptr;
+        maneuverControl = nullptr;
     }
 
 
@@ -41,62 +44,38 @@ public:
 
     virtual void initialize(int stage);
 
+    virtual void onPlatoonBeacon(const PlatooningBeacon* pb);
 
     virtual void onManeuverMessage(ManeuverMessage* mm);
 
-    PlatoonManeuver getManeuverInCourse() const
-    {
-        return maneuverInCourse;
-    }
+    virtual int getBestAvailableEntryPosition(int joiner_id);
 
-    void setManeuverInCourse(PlatoonManeuver maneuver)
-    {
-        this->maneuverInCourse = maneuver;
-    }
+    void setManeuverStatus(int veh_id, PlatoonManeuver maneuver);
 
+    virtual bool isJoinAllowed(int position = -1);
+
+    virtual void adjustToManeuver();
 
     virtual void startJoinManeuver(int platoonId, int leaderId, int position);
-
-    virtual void abortJoinManeuver();
-
-    virtual void startSplitManeuver();
-
-    virtual void abortSplitManeuver();
-
-    virtual void startMultipleJoinManeuver();
-
-    virtual void abortMultipleJoinManeuver();
-
 
     virtual void setupFormation();
 
     virtual void startManeuverFormation();
 
-    virtual void startSafeLeaderFormation();
-
-    virtual void startUnsafeLeaderFormation();
-
-    virtual void startSafeFollowerFormation();
-
-    virtual void startUnsafeFollowerFormation();
-
-
     virtual void sendUnicast(cPacket* msg, int destination);
-
 
 
 protected:
 
-    // Detect self events
-//    virtual void handleSelfMsg(cMessage* msg);
+    virtual void handleSelfMsg(cMessage* msg);
 
+    // Maneuver: Object that controls maneuver status
+    JoinManeuver* maneuverControl;
 
-    PlatoonManeuver maneuverInCourse;
+    // Event: Join maneuver adjustment
+    cMessage* join_adjust;
 
-    bool inManeuver;
-
-    JoinManeuver* joinManeuver;
 
 };
 
-#endif /* MANEUVERMANAGER_H_ */
+#endif /* SELFORGANIZATIONAPP_H_ */

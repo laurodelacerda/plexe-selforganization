@@ -105,18 +105,6 @@ protected:
     // Set Platoon Formation after road sign detection
     virtual void startManeuverFormation(){}
 
-    // Start safe leader movements
-    virtual void startSafeLeaderFormation(){}
-
-    // Start unsafe leader movements
-    virtual void startUnsafeLeaderFormation(){}
-
-    // Start safe follower movements
-    virtual void startSafeFollowerFormation(){}
-
-    // Start unsafe follower movements
-    virtual void startUnsafeFollowerFormation(){}
-
     // Detects if a maneuver is possible to be executed in a given lane
     double calculateGap(int lane_index, int position);
 

@@ -32,189 +32,210 @@ void SelfOrganizationApp::initialize(int stage)
 //            joinManeuver = new JoinAtBackSign(this);
 //        else
 //            throw new cRuntimeError("Invalid join maneuver implementation chosen");
-        joinManeuver = new JoinAtBackSign(this);
+        maneuverControl = new DynamicJoin(this);
 
+        join_adjust = new cMessage("join_adjust");
     }
 }
 
+void SelfOrganizationApp::onPlatoonBeacon(const PlatooningBeacon* pb)
+{
+//    if ((ongoing_maneuver == PlatoonManeuver::JOIN_AT_BACK) or
+//        (ongoing_maneuver == PlatoonManeuver::JOIN_AT_FRONT) or
+//        (ongoing_maneuver == PlatoonManeuver::JOIN_IN_THE_MIDDLE))
+//    {
+//    if (inManeuver)
+//    if ((role == PlatoonRole::JOINER) or (role == PlatoonRole::LEADER) or (role == PlatoonRole::FOLLOWER))
+    maneuverControl->onPlatoonBeacon(pb);
+//    }
+//    else if (ongoing_maneuver == PlatoonManeuver::SPLIT)
+//    {
+//        splitManeuver->onPlatoonBeacon(pb);
+//    }
+    BaseSelfOrganizationApp::onPlatoonBeacon(pb);
+}
+
+bool SelfOrganizationApp::isJoinAllowed(int position)
+{
+    if ((role == PlatoonRole::LEADER or role == PlatoonRole::NONE) and !inManeuver)
+    {
+        int lane_index   = traciVehicle->getLaneIndex();
+        int platoon_size = positionHelper->getPlatoonSize();
+        int veh_id       = nborCoord[lane_index][position].getId();
+
+        if (position >= platoon_size) // Permission to Join at Back
+            return true;
+
+        if (maneuver_status[veh_id] == PlatoonManeuver::IDLE)
+            return true;
+        else
+            return false;
+    }
+    else
+        return false;
+}
 
 void SelfOrganizationApp::onManeuverMessage(ManeuverMessage* mm)
 {
-    if (UpdatePlatoonFormation* msg = dynamic_cast<UpdatePlatoonFormation*>(mm))
-    {
-        handleUpdatePlatoonFormation(msg);
-        delete msg;
-    }
-    else
-    {
-        joinManeuver->onManeuverMessage(mm);
-//        // Verify each kind of maneuver to invoke correct maneuver
-//        if (maneuverInCourse == PlatoonManeuver::JOIN_AT_BACK)
+//    if (UpdatePlatoonFormation* msg = dynamic_cast<UpdatePlatoonFormation*>(mm))
+//    {
+//        handleUpdatePlatoonFormation(msg);
+//        delete msg;
+//    }
+//    else
+//    {
+//        if ((ongoing_maneuver == PlatoonManeuver::JOIN_AT_BACK) or
+//            (ongoing_maneuver == PlatoonManeuver::JOIN_AT_FRONT) or
+//            (ongoing_maneuver == PlatoonManeuver::JOIN_IN_THE_MIDDLE))
 //        {
-////            joinAtBack->onManeuverMessage(mm);
+//        if (joinManeuver != nullptr)
+    maneuverControl->onManeuverMessage(mm);
 //        }
-//        else if (maneuverInCourse == PlatoonManeuver::JOIN_IN_THE_MIDDLE)
-//        {
-////            joinInTheMiddle->onManeuverMessage(mm);
-//        }
-//        else if (maneuverInCourse == PlatoonManeuver::JOIN_AT_FRONT)
-//        {
-////            joinAtFront->onManeuverMessage(mm);
-//        }
-//        else
-//        {}
-////      TODO Adicionar outras manobras
-    }
 
-    delete mm;
+//    }
+
+    GeneralPlatooningApp::onManeuverMessage(mm);
 }
 
 void SelfOrganizationApp::startJoinManeuver(int platoonId, int leaderId, int position)
 {
-    ASSERT(getPlatoonRole() == PlatoonRole::NONE || getPlatoonRole() == PlatoonRole::UNSAFE_FOLLOWER || getPlatoonRole() == PlatoonRole::UNSAFE_LEADER);
+//    ASSERT((getPlatoonRole() == PlatoonRole::NONE) or
+//           (getPlatoonRole() == PlatoonRole::UNSAFE_FOLLOWER) or
+//           (getPlatoonRole() == PlatoonRole::UNSAFE_LEADER));
+
     ASSERT(!isInManeuver());
 
     JoinManeuverParameters params;
     params.platoonId = platoonId;
     params.leaderId = leaderId;
     params.position = position;
-    joinManeuver->startManeuver(&params);
+
+//    if (position == -1)
+//        ongoing_maneuver = PlatoonManeuver::JOIN_AT_BACK;
+//    else if (position == 0)
+//        ongoing_maneuver = PlatoonManeuver::JOIN_AT_FRONT;
+//    else if (position > 0)
+//        ongoing_maneuver = PlatoonManeuver::JOIN_IN_THE_MIDDLE;
+//    else
+//        abortJoinManeuver();
+//
+//    if (position >= -1)
+    maneuverControl->startManeuver(&params);
+
 }
-
-
-//void SelfOrganizationApp::handleSelfMsg(cMessage* msg){}
-
-
-void SelfOrganizationApp::abortJoinManeuver()
-{
-
-}
-
-void SelfOrganizationApp::startSplitManeuver()
-{
-}
-
-void SelfOrganizationApp::abortSplitManeuver()
-{}
-
-void SelfOrganizationApp::startMultipleJoinManeuver()
-{}
-
-void SelfOrganizationApp::abortMultipleJoinManeuver()
-{}
 
 void SelfOrganizationApp::setupFormation()
 {
-    std::vector<int> formation = map->getFormation(traciVehicle->getLaneIndex());
+    std::vector<int> formation = getFormation(traciVehicle->getLaneIndex());
 
     positionHelper->setPlatoonFormation(formation);
 }
 
 void SelfOrganizationApp::startManeuverFormation()
 {
-    switch(role)
+    Plexe::VEHICLE_DATA data;
+    traciVehicle->getVehicleData(&data);
+
+    std::vector<int> formation = getFormation(traciVehicle->getLaneIndex());
+    positionHelper->setPlatoonFormation(formation);
+
+    if (role == PlatoonRole::LEADER)
     {
-    case PlatoonRole::LEADER:
-        startSafeLeaderFormation();
-        break;
-
-    case PlatoonRole::UNSAFE_LEADER:
-        startUnsafeLeaderFormation();
-        break;
-
-    case PlatoonRole::FOLLOWER:
-        startSafeFollowerFormation();
-        break;
-
-    case PlatoonRole::UNSAFE_FOLLOWER:
-        startUnsafeFollowerFormation();
-        break;
-
-    default:
-        break;
+        positionHelper->setPlatoonId(positionHelper->getId());
+        positionHelper->setIsLeader(true);
+        positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
+        positionHelper->setPlatoonSpeed(data.speed);
     }
-}
-
-void SelfOrganizationApp::startSafeLeaderFormation()
-{
-    traciVehicle->setCruiseControlDesiredSpeed(50.0 / 3.6);
-    traciVehicle->setActiveController(Plexe::ACC);
-    traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
-
-    positionHelper->setIsLeader(true);
-    positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
-    positionHelper->setPlatoonSpeed(50 / 3.6);
-    positionHelper->setPlatoonId(positionHelper->getId());
-
-    setupFormation();
-}
-
-void SelfOrganizationApp::startUnsafeLeaderFormation()
-{
-    role = PlatoonRole::UNSAFE_LEADER;
-    setInManeuver(false);
-
-    int safest_lane   = map->getSafestLaneIndex();
-    int safest_leader = map->getSafestLaneLeader();
-    bool lane_leader  = map->isLaneLeader(myId);
-
-    bool permission = map->isSafeToMoveTo(PlatoonManeuver::JOIN_AT_BACK, safest_lane);
-//    std::cout << "Permissão: " << permission << std::endl;
-
-    if (permission && lane_leader && inDanger)
+    if (role == PlatoonRole::FOLLOWER)
     {
-        startJoinManeuver(safest_leader, safest_leader, -1);
+        positionHelper->setPlatoonId(formation.at(0));
+        positionHelper->setIsLeader(false);
+        positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
+
+        traciVehicle->setActiveController(Plexe::CACC);
+        traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
+        traciVehicle->setCACCConstantSpacing(20);
     }
-    else
+    if (role == PlatoonRole::UNSAFE_LEADER)
     {
-        Plexe::VEHICLE_DATA data;
-        traciVehicle->getVehicleData(&data);
-//        traciVehicle->slowDown((data.speed - 1) / 3.6, 0);
-        traciVehicle->slowDown(30 / 3.6, 0);
+        positionHelper->setPlatoonId(formation.at(0));
 
-        if (!safeJoinCheck->isScheduled())
-            scheduleAt(simTime() + SimTime(500, SIMTIME_MS), safeJoinCheck);
+        //    int safest_lane   = getSafestLaneIndex();
+        int safest_leader = getSafestLaneLeader();
+
+        if (ongoing_maneuver == PlatoonManeuver::IDLE)
+            startJoinManeuver(safest_leader, safest_leader, -1);
     }
-}
+    if (role == PlatoonRole::UNSAFE_FOLLOWER)
+    {
+        positionHelper->setPlatoonId(formation.at(0));
+        positionHelper->setIsLeader(false);
+        positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
 
-void SelfOrganizationApp::startSafeFollowerFormation()
-{
-    traciVehicle->setCruiseControlDesiredSpeed(160.0 / 3.6);
-    traciVehicle->setActiveController(Plexe::CACC);
-    traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
-    traciVehicle->setCACCConstantSpacing(1);
+        traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
 
-    positionHelper->setIsLeader(false);
-    positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
-    positionHelper->setPlatoonSpeed(50 / 3.6);
-    positionHelper->setPlatoonId(positionHelper->getLeaderId());
-
-    setupFormation();
-}
-
-void SelfOrganizationApp::startUnsafeFollowerFormation()
-{
-//    setPlatoonRole(PlatoonRole::NONE);
-
-//    traciVehicle->setCruiseControlDesiredSpeed(160.0 / 3.6);
-//    traciVehicle->setActiveController(Plexe::CACC);
-    traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
-//    traciVehicle->setCACCConstantSpacing(1);
-
-    positionHelper->setIsLeader(false);
-    positionHelper->setPlatoonLane(traciVehicle->getLaneIndex());
-    positionHelper->setPlatoonSpeed(30 / 3.6);
-    positionHelper->setPlatoonId(positionHelper->getLeaderId());
-
-    bool lane_leader  = map->isLaneLeader(myId);
-
-    if (inDanger && !safeJoinCheck->isScheduled() && !lane_leader)
-        scheduleAt(simTime() + SimTime(100, SIMTIME_MS), safeJoinCheck);
+        if (inDanger && !safeJoinCheck->isScheduled())
+            scheduleAt(simTime() + SimTime(100, SIMTIME_MS), safeJoinCheck);
+    }
 }
 
 SelfOrganizationApp::~SelfOrganizationApp()
 {
-    delete joinManeuver;
+    delete maneuverControl;
+    cancelAndDelete(join_adjust);
+    join_adjust = nullptr;
+}
+
+int SelfOrganizationApp::getBestAvailableEntryPosition(int joiner_id)
+{
+//     TODO Algoritmo de tomada de decisão para alocação de veículos em comboios
+
+//    Algoritmo Simples
+//      Distância euclidiana para à frente/trás do comboio
+//
+//
+//     O algoritmo tomador de decisão observa critérios como:
+//     a) lacunas disponíveis
+//     b) velocidade dos veículos envolvidos,
+//     c) distância euclidiana de aproximação à lacuna
+//     d) distância em relação ao bloqueio
+
+//     Para sugerir o seguinte pseudocódigo:
+//    (1)   Ordenar as lacunas disponíveis por critério de distância euclidiana em relação
+//          à posição atual do veículo solicitante
+//    (2)   Iterar sobre as lacunas, verificando:
+//    (2.1) Se lacuna mais próxima não estiver "ocupada" e couber veículo solicitante e a
+//          velocidade do veículo for suficiente para alcançar a lacuna, então sugerir a
+//          posição de entrada ao veículo solicitante.
+//          Caso contrário, iterar sobre outra lacuna.
+//    (3.1) Se não for possível entrada com lacunas disponíveis, sugerir entrada pela cauda
+
+//    Ps.: Há outros critérios que podem ser adotados para ordenar as lacunas, como
+//    I) maior lacuna
+//    II) espaçamento ótimo
+
+//    Contudo, não será possível discutí-los para este trabalho
+
+
+    VehicleCoord joiner_info = nbor_info[joiner_id];
+
+    int lane_index   = traciVehicle->getLaneIndex();
+    int platoon_size = nborCoord[lane_index].size();
+
+    Coord frontPos = nborCoord[lane_index].at(0).getCoord();
+    Coord backPos  = nborCoord[lane_index].at(platoon_size - 1).getCoord();
+
+    double dist_front = joiner_info.getCoord().distance(frontPos);
+    double dist_back  = joiner_info.getCoord().distance(backPos);
+
+
+    if (dist_front < dist_back) // join-at-front
+        return 0;
+    else                        // join-at-back
+        return platoon_size;
+
+//    return 1;
+
 }
 
 void SelfOrganizationApp::sendUnicast(cPacket* msg, int destination)
@@ -226,4 +247,37 @@ void SelfOrganizationApp::sendUnicast(cPacket* msg, int destination)
     unicast->setChannel(Channels::CCH);
     unicast->encapsulate(msg);
     sendDown(unicast);
+}
+
+void SelfOrganizationApp::adjustToManeuver()
+{
+    // TODO Realizar alterações de aceleração e desaceleração para entrada no comboio
+    if (ongoing_maneuver == PlatoonManeuver::JOIN_AT_BACK)
+    {
+//        traciVehicle->slowDown(targetPlatoonData->platoonSpeed - 1, 0);
+        scheduleAt(simTime() + SimTime(TIMER_JOIN_AT_BACK, SIMTIME_MS), join_adjust);
+    }
+    else if (ongoing_maneuver == PlatoonManeuver::JOIN_AT_FRONT)
+    {
+        scheduleAt(simTime() + SimTime(TIMER_JOIN_AT_FRONT, SIMTIME_MS), join_adjust);
+    }
+    else if (ongoing_maneuver == PlatoonManeuver::JOIN_AT_MIDDLE)
+    {
+        scheduleAt(simTime() + SimTime(TIMER_JOIN_AT_FRONT, SIMTIME_MS), join_adjust);
+    }
+}
+
+void SelfOrganizationApp::setManeuverStatus(int veh_id, PlatoonManeuver maneuver)
+{
+    maneuver_status[veh_id] = maneuver ;
+}
+
+void SelfOrganizationApp::handleSelfMsg(cMessage* msg)
+{
+    if (msg == join_adjust)
+    {
+        maneuverControl->moveToPosition();
+    }
+
+    BaseSelfOrganizationApp::handleSelfMsg(msg);
 }
