@@ -609,7 +609,7 @@ void TraCICommandInterface::Poi::remove(int32_t layer)
 
 Coord TraCICommandInterface::Poi::getPosition()
 {
-    return traci->genericGetCoord(CMD_GET_POI_VARIABLE, poiId, VAR_POSITION, RESPONSE_GET_POI_VARIABLE);
+    return traci->genericGetCoord(CMD_GET_POI_VARIABLE, poiId, VAR_POSITION, RESPONSE_GET_POI_VARIABLE, false);
 }
 
 std::string TraCICommandInterface::Poi::getTypeId()
@@ -933,7 +933,7 @@ std::string TraCICommandInterface::genericGetString(uint8_t commandId, std::stri
     return res;
 }
 
-Coord TraCICommandInterface::genericGetCoord(uint8_t commandId, std::string objectId, uint8_t variableId, uint8_t responseId)
+Coord TraCICommandInterface::genericGetCoord(uint8_t commandId, std::string objectId, uint8_t variableId, uint8_t responseId, bool convert)
 {
 
     uint8_t resultTypeId = POSITION_2D;
@@ -965,7 +965,10 @@ Coord TraCICommandInterface::genericGetCoord(uint8_t commandId, std::string obje
 
     ASSERT(buf.eof());
 
-    return connection.traci2omnet(TraCICoord(x, y));
+    if (convert)
+        return connection.traci2omnet(TraCICoord(x, y));
+    else
+        return Coord(x,y);
 }
 
 double TraCICommandInterface::genericGetDouble(uint8_t commandId, std::string objectId, uint8_t variableId, uint8_t responseId)
