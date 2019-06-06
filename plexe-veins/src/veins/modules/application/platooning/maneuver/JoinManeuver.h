@@ -27,6 +27,10 @@
 #include "veins/modules/application/platooning/messages/ManeuverMessage_m.h"
 #include "veins/modules/application/platooning/messages/MoveToPositionAck_m.h"
 #include "veins/modules/application/platooning/messages/MoveToPosition_m.h"
+#include "veins/modules/application/platooning/messages/HandoffLeadershipRequest_m.h"
+#include "veins/modules/application/platooning/messages/HandoffLeadershipResponse_m.h"
+#include "veins/modules/application/platooning/messages/LeadershipUpdate_m.h"
+#include "veins/modules/application/platooning/messages/SplitFormation_m.h"
 
 struct JoinManeuverParameters {
     int platoonId;
@@ -47,7 +51,7 @@ public:
 
     virtual void onManeuverMessage(const ManeuverMessage* mm) override;
 
-    virtual void moveInToPlatoon(){}
+    virtual void moveToPosition(){}
 
 protected:
     /**
@@ -163,6 +167,23 @@ protected:
      * @param JoinFormationAck msg to handle
      */
     virtual void handleJoinFormationAck(const JoinFormationAck* msg) = 0;
+
+
+    HandoffLeadershipRequest* createHandoffLeadershipRequest(int vehicleId, std::string externalId, int platoonId, int destinationId, int currentLaneIndex, double xPos, double yPos);
+
+    HandoffLeadershipResponse* createHandoffLeadershipResponse(int vehicleId, std::string externalId, int platoonId, int destinationId, bool permitted, int platoonLane, const std::vector<int>& newPlatoonFormation);
+
+    LeadershipUpdate* createLeadershipUpdate(int vehicleId, std::string externalId, int platoonId, int destinationId, double platoonSpeed, int platoonLane, const std::vector<int>& newPlatoonFormation);
+
+    SplitFormation* createSplitFormation(int vehicleId, std::string externalId, int platoonId, int destinationId, double platoonSpeed, int platoonLane, double gap, const std::vector<int>& newPlatoonFormation);
+
+    virtual void handleHandoffLeadershipRequest(const HandoffLeadershipRequest* msg) = 0;
+
+    virtual void handleHandoffLeadershipResponse(const HandoffLeadershipResponse* msg) = 0;
+
+    virtual void handleLeadershipUpdate(const LeadershipUpdate* msg) = 0;
+
+    virtual void handleSplitFormation(const SplitFormation* msg) = 0;
 
 };
 

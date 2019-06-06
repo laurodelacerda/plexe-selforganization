@@ -44,6 +44,18 @@ void JoinManeuver::onManeuverMessage(const ManeuverMessage* mm)
     else if (const JoinFormationAck* msg = dynamic_cast<const JoinFormationAck*>(mm)) {
         handleJoinFormationAck(msg);
     }
+    else if (const HandoffLeadershipRequest* msg = dynamic_cast<const HandoffLeadershipRequest*>(mm)) {
+        handleHandoffLeadershipRequest(msg);
+    }
+    else if (const HandoffLeadershipResponse* msg = dynamic_cast<const HandoffLeadershipResponse*>(mm)) {
+        handleHandoffLeadershipResponse(msg);
+    }
+    else if (const LeadershipUpdate* msg = dynamic_cast<const LeadershipUpdate*>(mm)) {
+        handleLeadershipUpdate(msg);
+    }
+    else if (const SplitFormation* msg = dynamic_cast<const SplitFormation*>(mm)) {
+        handleSplitFormation(msg);
+    }
 }
 
 JoinPlatoonRequest* JoinManeuver::createJoinPlatoonRequest(int vehicleId, std::string externalId, int platoonId, int destinationId, int currentLaneIndex, double xPos, double yPos)
@@ -116,3 +128,61 @@ JoinFormationAck* JoinManeuver::createJoinFormationAck(int vehicleId, std::strin
     return msg;
 }
 
+HandoffLeadershipRequest* JoinManeuver::createHandoffLeadershipRequest(int vehicleId, std::string externalId,
+                                                                       int platoonId, int destinationId,
+                                                                       int currentLaneIndex, double xPos, double yPos)
+{
+    HandoffLeadershipRequest* msg = new HandoffLeadershipRequest("HandoffLeadershipRequest");
+    app->fillManeuverMessage(msg, vehicleId, externalId, platoonId, destinationId);
+    msg->setCurrentLaneIndex(currentLaneIndex);
+    msg->setXPos(xPos);
+    msg->setYPos(yPos);
+    return msg;
+}
+
+HandoffLeadershipResponse* JoinManeuver::createHandoffLeadershipResponse(int vehicleId, std::string externalId,
+                                                                         int platoonId, int destinationId, bool permitted,
+                                                                         int platoonLane, const std::vector<int>& newPlatoonFormation)
+{
+    HandoffLeadershipResponse* msg = new HandoffLeadershipResponse("HandoffLeadershipResponse");
+    app->fillManeuverMessage(msg, vehicleId, externalId, platoonId, destinationId);
+    msg->setPermitted(permitted);
+    msg->setPlatoonLane(platoonLane);
+    msg->setNewPlatoonFormationArraySize(newPlatoonFormation.size());
+    for (unsigned int i = 0; i < newPlatoonFormation.size(); i++)
+    {
+        msg->setNewPlatoonFormation(i, newPlatoonFormation[i]);
+    }
+    return msg;
+}
+
+LeadershipUpdate* JoinManeuver::createLeadershipUpdate(int vehicleId, std::string externalId, int platoonId, int destinationId,
+                                                       double platoonSpeed, int platoonLane, const std::vector<int>& newPlatoonFormation)
+{
+    LeadershipUpdate* msg = new LeadershipUpdate("LeadershipUpdate");
+    app->fillManeuverMessage(msg, vehicleId, externalId, platoonId, destinationId);
+    msg->setPlatoonSpeed(platoonSpeed);
+    msg->setPlatoonLane(platoonLane);
+    msg->setNewPlatoonFormationArraySize(newPlatoonFormation.size());
+    for (unsigned int i = 0; i < newPlatoonFormation.size(); i++) {
+        msg->setNewPlatoonFormation(i, newPlatoonFormation[i]);
+    }
+    return msg;
+}
+
+SplitFormation* JoinManeuver::createSplitFormation(int vehicleId, std::string externalId, int platoonId, int destinationId,
+        double platoonSpeed, int platoonLane, double gap, const std::vector<int>& newPlatoonFormation)
+{
+    SplitFormation* msg = new SplitFormation("SplitFormation");
+    app->fillManeuverMessage(msg, vehicleId, externalId, platoonId, destinationId);
+    msg->setPlatoonSpeed(platoonSpeed);
+    msg->setPlatoonLane(platoonLane);
+    msg->setGap(gap);
+    msg->setNewPlatoonFormationArraySize(newPlatoonFormation.size());
+    for (unsigned int i = 0; i < newPlatoonFormation.size(); i++)
+    {
+        msg->setNewPlatoonFormation(i, newPlatoonFormation[i]);
+    }
+    return msg;
+
+}
