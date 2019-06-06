@@ -18,9 +18,7 @@ package org.car2x.veins.modules.application.platooning.self_organization;
 import org.car2x.veins.modules.application.platooning.apps.GeneralPlatooningApp;
 
 simple BaseSelfOrganizationApp extends GeneralPlatooningApp
-{   
-    double alert_distance @unit("meters") = default(10 meters);
-     
+{       
     @display("i=block/app2");
     @class(BaseSelfOrganizationApp);
 }
