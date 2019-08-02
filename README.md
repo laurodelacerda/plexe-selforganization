@@ -1,4 +1,4 @@
-# plexe-signs
+# plexe-selforganization
 Dinamically creates platoons on the emergence of a road blocking (signs, accidents, blockage)
 
 It adds the module SelfOrganizingApp that identifies road sign shapes in SUMO simulation triggering formation of dynamic platoons.
@@ -16,7 +16,7 @@ The SelfOrganizingApp organizes vehicles on a per-lane basis after the detection
 The best maneuver for a given scenario can be chosen based on a criteria: least distance, effective gap usage, first fit gap. Maneuvers applied can be the following:
 
 - Join at Back [available]
-- Join at Front [coming soon]
+- Join at Front [available]
 - Join in the Middle [coming soon]
 - Split [coming soon]
 - Merge [coming soon]
