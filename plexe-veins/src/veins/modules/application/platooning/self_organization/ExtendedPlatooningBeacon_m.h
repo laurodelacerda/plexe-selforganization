@@ -1,5 +1,5 @@
 //
-// Generated file, do not edit! Created by nedtool 5.1 from veins/modules/application/platooning/signs/ExtendedPlatooningBeacon.msg.
+// Generated file, do not edit! Created by nedtool 5.1 from veins/modules/application/platooning/self_organization/ExtendedPlatooningBeacon.msg.
 //
 
 #if defined(__clang__)
@@ -23,7 +23,7 @@
 // }}
 
 /**
- * Class generated from <tt>veins/modules/application/platooning/signs/ExtendedPlatooningBeacon.msg:24</tt> by nedtool.
+ * Class generated from <tt>veins/modules/application/platooning/self_organization/ExtendedPlatooningBeacon.msg:24</tt> by nedtool.
  * <pre>
  * packet ExtendedPlatooningBeacon extends PlatooningBeacon
  * {

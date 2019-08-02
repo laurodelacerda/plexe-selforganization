@@ -33,6 +33,7 @@
 
 #include "veins/modules/application/platooning/apps/PlatoonDefs.h"
 
+
 /**
  * General purpose application for Platoons
  *
@@ -51,35 +52,48 @@
 class GeneralPlatooningApp : public BaseApp {
 
 public:
+
     /** c'tor for GeneralPlatooningApp */
     GeneralPlatooningApp()
-        : inManeuver(false)
-        , role(PlatoonRole::NONE)
-//        , joinManeuver(nullptr)
+        : inManeuver(false),
+          role(PlatoonRole::NONE),
+          ongoing_maneuver(PlatoonManeuver::IDLE)
     {
     }
 
     /** d'tor for GeneralPlatooningApp */
     virtual ~GeneralPlatooningApp();
 
-    /**
-     * Returns the role of this car in the platoon
-     *
-     * @return PlatoonRole the role in the platoon
-     * @see PlatoonRole
-     */
-    const PlatoonRole& getPlatoonRole() const
+    // Sets maneuvering status of other vehicles
+    void setManeuverStatus(int veh_id, PlatoonManeuver maneuver) {}
+
+    // Obtains the best available entry position for joining vehicles
+    virtual int getBestAvailableEntryPosition(int joiner_id)
     {
-        return role;
+        return -1;
     }
 
-    /**
-     * Sets the role of this car in the platoon
-     *
-     * @param PlatoonRole r the role in the platoon
-     * @see PlatoonRole
-     */
-    void setPlatoonRole(PlatoonRole r);
+    // Is already safe to maneuver?
+    virtual bool isSafeToManeuver(int lane_index, int position)
+    {
+        return false;
+    }
+
+    // Adjusts to maneuvering
+    virtual void adjustToManeuver(){}
+
+    // Get maneuver in course
+    PlatoonManeuver getOngoingManeuver() const
+    {
+        return this->ongoing_maneuver;
+    }
+
+    void setOngoingManeuver(PlatoonManeuver maneuverInCourse)
+    {
+        this->ongoing_maneuver = maneuverInCourse;
+    }
+
+    virtual void setupFormation(){}
 
     /** override from BaseApp */
     virtual void initialize(int stage) override;
@@ -113,6 +127,25 @@ public:
     {
         inManeuver = b;
     }
+
+    /**
+     * Returns the role of this car in the platoon
+     *
+     * @return PlatoonRole the role in the platoon
+     * @see PlatoonRole
+     */
+    const PlatoonRole& getPlatoonRole() const
+    {
+        return role;
+    }
+
+    /**
+     * Sets the role of this car in the platoon
+     *
+     * @param PlatoonRole r the role in the platoon
+     * @see PlatoonRole
+     */
+    void setPlatoonRole(PlatoonRole r);
 
     BasePositionHelper* getPositionHelper()
     {
@@ -170,7 +203,9 @@ public:
      */
     virtual void handleUpdatePlatoonFormation(const UpdatePlatoonFormation* msg);
 
-    bool isJoinAllowed() const;
+    virtual bool isJoinAllowed(int position = -1);
+
+
 
 protected:
     /** override this method of BaseApp. we want to handle it ourself */
@@ -193,11 +228,17 @@ protected:
     /** am i in a maneuver? */
     bool inManeuver;
 
-    /** the role of this vehicle */
+
+    // Container: Maneuver status of each member
+    // NOTE This is controlled by the lane leader
+    std::map<int, PlatoonManeuver> maneuver_status;
+
+    // Maneuver in progress
+    PlatoonManeuver ongoing_maneuver;
+
+    // Platoon role of this vehicle
     PlatoonRole role;
 
-//    /** join maneuver implementation */
-//    JoinManeuver* joinManeuver;
 };
 
 #endif

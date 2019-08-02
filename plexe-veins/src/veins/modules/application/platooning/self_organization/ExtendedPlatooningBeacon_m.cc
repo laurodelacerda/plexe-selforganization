@@ -1,5 +1,5 @@
 //
-// Generated file, do not edit! Created by nedtool 5.1 from veins/modules/application/platooning/signs/ExtendedPlatooningBeacon.msg.
+// Generated file, do not edit! Created by nedtool 5.1 from veins/modules/application/platooning/self_organization/ExtendedPlatooningBeacon.msg.
 //
 
 // Disable warnings about unused variables, empty switch stmts, etc:

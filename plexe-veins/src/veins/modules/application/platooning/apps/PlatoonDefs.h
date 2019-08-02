@@ -19,6 +19,7 @@
 #define PLATOONDEFS_H_
 
 #include <cstddef>
+#include "veins/modules/mobility/traci/TraCICommandInterface.h"
 
 /** possible roles of this vehicle */
 enum class PlatoonRole : size_t {
@@ -40,22 +41,39 @@ enum class PlatoonRole : size_t {
     J_UNSAFE_FOLLOWER
 };
 
+enum class DistanceToBlockage : size_t
+{
+    NONE,
+    D_SAFE,
+    D_CAUTIOUS,
+    D_DANGEROUS
+};
+
+enum class VehicleRelativePos : size_t
+{
+    AHEAD,
+    WAY_AHEAD,
+    BEHIND,
+    WAY_BEHIND
+};
+
 // Platoon Maneuvers
 enum class PlatoonManeuver : size_t
 {
-    NONE,
+    IDLE,
     JOIN_AT_BACK,
     JOIN_AT_FRONT,
-    JOIN_IN_THE_MIDDLE,
+    JOIN_AT_MIDDLE,
     SPLIT,
     MERGE,
     MULTIPLE_JOIN_AT_BACK,
     MULTIPLE_JOIN_AT_FRONT,
-    MULTIPLE_JOIN_IN_THE_MIDDLE
+    MULTIPLE_JOIN_AT_MIDDLE
 };
 
-// Direction
-enum class Direction : size_t
+// Orientation
+// TODO Maybe Veins has this class
+enum class Orientation : size_t
 {
     NONE,
     NORTH,
@@ -77,6 +95,25 @@ enum class SignType : size_t
     REDUCE
 };
 
+struct RoadSignInfo
+{
+    // Road Sign Id
+    std::string sign_id;
+    // Road Sign Type
+    std::string sign_type;
+    // Road Sign Lane
+    int lane_index;
+    // Vehicle is in the same Lane of Road Sign
+    bool same_lane;
+    // Road Sign Effect
+    bool rule_active;
+};
+
+struct IV_Gaps
+{
+    Veins::Coord front_vehicle;
+    Veins::Coord back_vehicle;
+};
 
 
 #endif /* PLATOONDEFS_H_ */

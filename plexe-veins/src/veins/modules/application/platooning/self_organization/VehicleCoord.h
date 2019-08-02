@@ -33,6 +33,16 @@ struct VehicleCoord
         timestamp = SIMTIME_ZERO;
     }
 
+    VehicleCoord(int id, int lane, Veins::Coord c, int length = 0)
+    : vehicleId(id),
+      vehicleLaneIndex(lane),
+      vehicleLength(length),
+      vehicleSpeed(0.0),
+      vehicleCoord(c)
+    {
+        timestamp = simTime();
+    }
+
     VehicleCoord(int id, int lane, int posX, int posY, int length = 0)
     : vehicleId(id),
       vehicleLaneIndex(lane),

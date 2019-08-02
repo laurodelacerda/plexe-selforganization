@@ -163,7 +163,7 @@ void JoinAtBack::handleMoveToPosition(const MoveToPosition* msg)
 
     // check for correct lane. if not in correct lane, change it
     // if this already is the platoon lane, join at the back (or v.v.)
-    // if this is not the plaoon lane, we have to move into longitudinal
+    // if this is not the platoon lane, we have to move into longitudinal
     // position
     int currentLane = traciVehicle->getLaneIndex();
     if (currentLane != targetPlatoonData->platoonLane) {
@@ -261,4 +261,12 @@ void JoinAtBack::handleJoinFormationAck(const JoinFormationAck* msg)
 
     joinManeuverState = JoinManeuverState::IDLE;
     app->setInManeuver(false);
+}
+
+void JoinAtBack::handleHandoffLeadershipRequest(
+        const HandoffLeadershipRequest* msg) {
+}
+
+void JoinAtBack::handleHandoffLeadershipResponse(
+        const HandoffLeadershipResponse* msg) {
 }

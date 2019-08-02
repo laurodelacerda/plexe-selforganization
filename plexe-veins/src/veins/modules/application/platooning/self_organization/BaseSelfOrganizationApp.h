@@ -22,7 +22,7 @@
 #include "veins/modules/application/platooning/messages/RoadSignWarning_m.h"
 
 // Distâncias em metros
-#define SAFETY_GAP           5
+#define SAFETY_GAP          10
 #define DISTANCE_SAFE      200
 #define DISTANCE_CAUTIOUS  150
 #define DISTANCE_DANGEROUS  50
@@ -55,10 +55,6 @@ public:
 
     // Decides what to do when a road sign is detected
     void onRoadSignDetection(std::string sign_id, std::string sign_type, int lane_index, double range);
-
-    virtual bool isSafeToManeuver(int lane_index, int position);
-
-    virtual void adjustToManeuver(){}
 
     bool isInDanger() const
     {
@@ -155,7 +151,7 @@ protected:
     void sortTopology();
 
     // prints info about current vehicle and topology
-    void printInfo();
+    virtual void printInfo(){};
 
 
 protected:

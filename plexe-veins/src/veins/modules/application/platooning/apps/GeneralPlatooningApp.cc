@@ -43,7 +43,7 @@ void GeneralPlatooningApp::initialize(int stage)
     }
 }
 
-bool GeneralPlatooningApp::isJoinAllowed() const
+bool GeneralPlatooningApp::isJoinAllowed(int position)
 {
     return ((role == PlatoonRole::LEADER || role == PlatoonRole::NONE) && !inManeuver);
 }
@@ -126,7 +126,7 @@ void GeneralPlatooningApp::onPlatoonBeacon(const PlatooningBeacon* pb)
 void GeneralPlatooningApp::onManeuverMessage(ManeuverMessage* mm)
 {
 //    joinManeuver->onManeuverMessage(mm);
-    delete mm;
+//    delete mm;
 }
 
 void GeneralPlatooningApp::fillManeuverMessage(ManeuverMessage* msg, int vehicleId, std::string externalId, int platoonId, int destinationId)

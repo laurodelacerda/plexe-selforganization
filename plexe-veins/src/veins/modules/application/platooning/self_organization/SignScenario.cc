@@ -29,6 +29,7 @@ void SignScenario::initialize(int stage)
     BaseScenario::initialize(stage);
 
     lastSignId = "";
+    lastLaneIndex = -1;
 
     if (stage == 1) {
         app = FindModule<SelfOrganizationApp*>::findSubModule(getParentModule());
@@ -124,18 +125,23 @@ void SignScenario::receiveSignal(cComponent* source, simsignal_t signalID, cObje
         std::string range_str;
 
         traciVehicle->getCustomParameter("device.signDetector.lastRoadSignId", sign_id);
-        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignShape", sign_type);
-        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLane", lane_id);
-        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLaneIndex", lane_index_str);
-        traciVehicle->getCustomParameter("device.signDetector.range", range_str);
-
-        lane_index = std::atoi(lane_index_str.c_str());
-        sign_range = std::atof(range_str.c_str());
 
         if (lastSignId != sign_id)
-        {
-            lastSignId = sign_id;
-            app->onRoadSignDetection(sign_id, sign_type, lane_index, sign_range);
+		{
+			lastSignId = sign_id;
+
+	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignShape", sign_type);
+	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLane", lane_id);
+	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLaneIndex", lane_index_str);
+	        traciVehicle->getCustomParameter("device.signDetector.range", range_str);
+	        lane_index = std::atoi(lane_index_str.c_str());
+	        sign_range = std::atof(range_str.c_str());
+
+        	if (lastLaneIndex != lane_index)
+			{
+				lastLaneIndex = lane_index;
+				app->onRoadSignDetection(sign_id, sign_type, lane_index, sign_range);
+			}
         }
     }
 }

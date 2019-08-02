@@ -50,6 +50,8 @@ public:
 
     virtual int getBestAvailableEntryPosition(int joiner_id);
 
+    virtual bool isSafeToManeuver(int lane_index, int position);
+
     void setManeuverStatus(int veh_id, PlatoonManeuver maneuver);
 
     virtual bool isJoinAllowed(int position = -1);
@@ -64,13 +66,15 @@ public:
 
     virtual void sendUnicast(cPacket* msg, int destination);
 
+    virtual void printInfo();
 
 protected:
 
     virtual void handleSelfMsg(cMessage* msg);
 
     // Maneuver: Object that controls maneuver status
-    JoinManeuver* maneuverControl;
+//    JoinManeuver* maneuverControl;
+    DynamicJoin *maneuverControl;
 
     // Event: Join maneuver adjustment
     cMessage* join_adjust;

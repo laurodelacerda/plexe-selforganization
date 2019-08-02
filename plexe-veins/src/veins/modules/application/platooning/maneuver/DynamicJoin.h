@@ -142,7 +142,8 @@ protected:
         {
             return newFormation.at(joinIndex - 1);
         }
-    };
+
+	};
 
     /** data that a leader stores about a joining vehicle */
     struct JoinerData {

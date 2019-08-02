@@ -18,9 +18,9 @@
 #ifndef EXTENDEDPLATOONINGBEACONING_H_
 #define EXTENDEDPLATOONINGBEACONING_H_
 
+#include "../self_organization/ExtendedPlatooningBeacon_m.h"
 #include "veins/modules/application/platooning/protocols/BaseProtocol.h"
 
-#include "veins/modules/application/platooning/signs/ExtendedPlatooningBeacon_m.h"
 
 class ExtendedPlatooningBeaconing : public BaseProtocol {
 protected:

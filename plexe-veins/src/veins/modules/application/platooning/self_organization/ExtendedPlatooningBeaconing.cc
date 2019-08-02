@@ -15,7 +15,7 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
 
-#include "ExtendedPlatooningBeaconing.h"
+#include "../self_organization/ExtendedPlatooningBeaconing.h"
 
 Define_Module(ExtendedPlatooningBeaconing)
 

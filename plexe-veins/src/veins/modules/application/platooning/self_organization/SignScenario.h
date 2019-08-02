@@ -57,6 +57,7 @@ protected:
     static const simsignalwrap_t mobilityStateChangedSignal;
 
     std::string lastSignId;
+    int lastLaneIndex;
 };
 
 #endif

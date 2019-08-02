@@ -102,6 +102,12 @@ public:
     virtual void handleJoinFormationAck(const JoinFormationAck* msg) override;
 
 
+    virtual void handleHandoffLeadershipRequest(const HandoffLeadershipRequest* msg);
+
+
+    virtual void handleHandoffLeadershipResponse(const HandoffLeadershipResponse* msg);
+
+
 protected:
     /** Possible states a vehicle can be in during a join maneuver */
     enum class JoinManeuverState {

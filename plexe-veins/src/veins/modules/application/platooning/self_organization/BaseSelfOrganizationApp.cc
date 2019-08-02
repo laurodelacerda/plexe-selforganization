@@ -69,15 +69,15 @@ void BaseSelfOrganizationApp::handleSelfMsg(cMessage* msg)
         traciVehicle->getVehicleData(&data);
         updateMyPosition(myId, traciVehicle->getLaneIndex(), data);
 
-        updateFlags();
+//        updateFlags(); Não deveria atualizar flags para não atrapalhar ações de manobra
         scheduleAt(simTime() + SimTime(100, SIMTIME_MS), positionUpdateMsg);
     }
 
-    if (msg == printCheck)
-    {
+//    if (msg == printCheck)
+//    {
 //        printInfo();
 //        scheduleAt(simTime() + SimTime(100, SIMTIME_MS) + 2, printCheck);
-    }
+//    }
 
     if (msg == safeJoinCheck)
     {
@@ -100,6 +100,9 @@ void BaseSelfOrganizationApp::onPlatoonBeacon(const PlatooningBeacon* pb)
     // Send to lower layers, including maneuvers
     GeneralPlatooningApp::onPlatoonBeacon(pb);
 
+//    https://sumo.dlr.de/wiki/Definition_of_Vehicles,_Vehicle_Types,_and_Routes#Lane-Changing_Models
+//    TODO Find some place to call this method once for a while
+	traciVehicle->setLaneChangeMode(512);
 }
 
 void BaseSelfOrganizationApp::updateTelemetryMap(const PlatooningBeacon* pb)
@@ -281,7 +284,7 @@ void BaseSelfOrganizationApp::updateFlags()
 
     if ((lane_leader) && (lane_safe))
     {
-        role = PlatoonRole::LEADER;
+//        role = PlatoonRole::LEADER;
         inDanger = false;
         findHost()->getDisplayString().updateWith("r=8,green");
     }
@@ -321,86 +324,6 @@ void BaseSelfOrganizationApp::handleLowerMsg(cMessage* msg)
     else {
         GeneralPlatooningApp::handleLowerMsg(msg);
     }
-}
-
-void BaseSelfOrganizationApp::printInfo()
-{
-    std::string role_str ;
-
-    if (getPlatoonRole() == PlatoonRole::LEADER)
-        role_str = "LEADER";
-    else if (getPlatoonRole() == PlatoonRole::FOLLOWER)
-        role_str = "FOLLOWER";
-    else if (getPlatoonRole() == PlatoonRole::JOINER)
-        role_str = "JOINER";
-    else if (getPlatoonRole() == PlatoonRole::UNSAFE_LEADER)
-        role_str = "UNSAFE_LEADER";
-    else if (getPlatoonRole() == PlatoonRole::UNSAFE_FOLLOWER)
-        role_str = "UNSAFE_FOLLOWER";
-    else
-        role_str = "NONE";
-
-
-    std::cout << "\n\n@@@Vehicle " << myId << " in Platoon " << positionHelper->getPlatoonId() << " at " << simTime() << " @@@"
-//                 << "\n Cruise Model: " << traciVehicle->getActiveController()
-//                 << "\n P Helper id: "  << positionHelper->getId()
-                 << "\nPlatoon Pos: "  << positionHelper->getPosition()
-                 << "\nLeader Id: "   << positionHelper->getLeaderId()
-                 << "\nPlatoon Size: " << positionHelper->getPlatoonSize()
-//                 << "\n P Leader: "     << positionHelper->isLeader()
-//                 << "\n CurrentLane: "  << traciVehicle->getLaneIndex()
-//                 << "\n Best Lane: "    << getSafestLane()
-//                 << "\n Sign dist: "    << lastSeenRoadSign
-//                 << "\n Sign time: "    << timeToRoadSign
-//                 << "\n Headway (s): "  << traciVehicle->getACCHeadwayTime()
-//                 << "\n Spacing (m): "  << traciVehicle->getCACCConstantSpacing()
-                 << "\nPlatoon Role: " << role_str
-//                 << "\nP Length: "     << map->getPlatoonLength(traciVehicle->getLaneIndex())
-                 << "\nP Length: "     << getPlatoonLength(traciVehicle->getLaneIndex())
-                 << "\nIn Danger: "    << inDanger
-                 << "\nIn Maneuver: "  << inManeuver;
-//                 << "\n\n";
-
-
-    for (int i = 0; i < 4; i++)
-    {
-        std::cout << "\nLane" << "[" << i << "]: " ;
-
-//        std::vector<int> formation = map->getFormation(i);
-        std::vector<int> formation = getFormation(i);
-        for (auto &j : formation)
-            std::cout << j << " ";
-    }
-
-//    std::vector<int> blocked_lanes = map->getBlockedLanes();
-    std::vector<int> blocked_lanes = getBlockedLanes();
-
-    std::cout << "\nBlocked Lanes: "  ;
-    for (int j = 0; j < blocked_lanes.size(); j++)
-    {
-        std::cout << blocked_lanes.at(j) << " ";
-    }
-
-    // Intervehicular Gaps
-
-    std::cout << "Interveicular Gaps:" << std::endl;
-
-//    std::array<std::vector<double>, 5> gaps = map->calculatePlatoonSpacing();
-    std::array<std::vector<double>, 5> gaps;
-
-    for(int i = 0; i < 5; i++)
-        calculatePlatoonGaps(gaps[i], i, traciVehicle->getLength());
-
-    for(int k = 0; k < 5; k++)
-    {
-        std::cout << "Lane " << k << ": " << std::endl;
-        for(double d : gaps[k])
-        {
-            std::cout << d << " ";
-        }
-        std::cout << "\n";
-    }
-
 }
 
 void BaseSelfOrganizationApp::calculatePlatoonGaps(std::vector<double> &gaps, int lane_index, double veh_lenght)
@@ -774,75 +697,4 @@ std::vector<int> BaseSelfOrganizationApp::getLaneLeaders()
 std::vector<int> BaseSelfOrganizationApp::getBlockedLanes()
 {
     return blockedLanes;
-}
-
-bool BaseSelfOrganizationApp::isSafeToManeuver(int lane_index, int position)
-{
-//    Verificar minha posição em relação à posição que se deseja ocupar no pelotão, sendo -1 a entrada por trás.
-
-//    Caso minha coordenada esteja suficientemente segura, retornar true
-
-    Plexe::VEHICLE_DATA data;
-    traciVehicle->getVehicleData(&data);
-
-    Coord myPos = Coord(data.positionX, data.positionY);
-//    Veins::TraCICoord traciPosition = mobility->getManager()->omnet2traci(mobility->getCurrentPosition());
-//    double distance = position.distance(frontPosition) - pb->getLength();
-
-    if (lane_index == traciVehicle->getLaneIndex()) return false;
-
-    int platoon_size = nborCoord[lane_index].size();
-
-    double distance = 0;
-
-    if (position == 0) // Join at Front
-    {
-        VehicleCoord head = nborCoord[lane_index][0];
-        Coord  head_pos  = head.getCoord();
-        double head_size = head.getLength();
-//        Coord myPos     = mobility->getCurrentPosition();
-
-        distance = traci->getDistance(head_pos, myPos, true);
-        double dist = myPos.distance(head_pos) - head_size;
-
-        if (distance == DBL_MAX) // Veículo solicitante está na frente da cabeça do comboio
-        {
-            distance = traci->getDistance(myPos, head_pos, true);
-            return false;
-        }
-        else if ((distance != DBL_MAX) and (std::fabs(dist) > SAFETY_GAP)) // Lacuna de segurança do comboio
-            return true;
-    }
-    else if ((position > 0) and (position < platoon_size)) // join-at-middle
-    {
-        VehicleCoord front = nborCoord[lane_index][position - 1];
-        VehicleCoord back  = nborCoord[lane_index][position];
-
-        Coord front_pos = front.getCoord();
-        Coord back_pos  = back.getCoord();
-
-        double front_size = front.getLength();
-
-        double dist_back  = traci->getDistance(myPos, back_pos, false);
-        double dist_front = traci->getDistance(front_pos, myPos, false) - front_size;
-
-        if ((dist_back >= SAFETY_GAP) and (dist_front >= SAFETY_GAP))
-            return true;
-        else
-            return false;
-    }
-    else if (position == platoon_size) // Join at Back
-    {
-        Coord last_pos = nborCoord[lane_index][platoon_size - 1].getCoord();
-//        Coord my_pos   = mobility->getCurrentPosition();
-
-        distance = traci->getDistance(myPos, last_pos, true);
-
-        if (distance == DBL_MAX) // Veículo solicitante está na frente da cauda do comboio
-//            distance = traci->getDistance(last_pos, my_pos, true);
-            return false;
-        else if (distance > SAFETY_GAP) // Lacuna de segurança do comboio
-            return true;
-
-    }
 }
