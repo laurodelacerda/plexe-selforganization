@@ -112,7 +112,7 @@ private:
     * @param[in] veh The vehicle that holds this device.
     * @param[in] poi The POI Lane that represents a road sign.
     */
-    void onRoadSignDetection(SUMOVehicle& veh, PointOfInterest* poi);
+    void onRoadSignDetection(SUMOVehicle& veh, PointOfInterest* poi, int laneIndex);
 
 private:
 

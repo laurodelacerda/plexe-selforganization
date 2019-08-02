@@ -165,17 +165,17 @@ MSDevice_SignDetector::notifyMove(SUMOVehicle& veh, double /* oldPos */, double 
         // Filtering POIs in the delimited range from lanes that vehicles are passing by
         if ((poi) && (std::find(lanes.begin(), lanes.end(), poi->getLane()) != lanes.end()) && (distance < myRange))
         {
-            lastRoadSignLaneIndex = lanesMap[poi->getLane()];
+            // lastRoadSignLaneIndex = lanesMap[poi->getLane()];
 
             // adding rules to be followed
             if (std::find(rules->begin(), rules->end(), poi->getID()) == rules->end()) {
                 rules->push_back(poi->getID());
-                onRoadSignDetection(veh, poi);
+                onRoadSignDetection(veh, poi, lanesMap[poi->getLane()]);
 
                 std::cout << "Car " << veh.getID() << " perceived road sign "
                           << poi->getID() << " - " << poi->getShapeType()
                           << " in the lane " << poi->getLane()
-                          << "[" << lastRoadSignLaneIndex << "]"<< "\n";
+                          << "[" << lastRoadSignLaneIndex << "]"<< std::endl;
             }
         }
     }
@@ -257,7 +257,7 @@ MSDevice_SignDetector::setParameter(const std::string& key, const std::string& v
 // my functions
 
 void
-MSDevice_SignDetector::onRoadSignDetection(SUMOVehicle& veh, PointOfInterest* poi)
+MSDevice_SignDetector::onRoadSignDetection(SUMOVehicle& veh, PointOfInterest* poi, int laneIndex)
 {
   // Example of POI :
   // <poi id="POI_0" type="traffic_sign" color="white" layer="3.00" lane="2i_0"
@@ -271,6 +271,7 @@ MSDevice_SignDetector::onRoadSignDetection(SUMOVehicle& veh, PointOfInterest* po
     lastRoadSignId    = poi->getID();
     lastRoadSignShape = poi->getShapeType();
     lastRoadSignLane  = poi->getLane();
+    lastRoadSignLaneIndex = laneIndex;
 }
 
 
