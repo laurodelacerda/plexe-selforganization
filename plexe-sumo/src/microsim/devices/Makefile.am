@@ -15,4 +15,4 @@ MSDevice_Bluelight.cpp MSDevice_Bluelight.h \
 MSDevice_FCD.cpp MSDevice_FCD.h \
 MSDevice_Vehroutes.cpp MSDevice_Vehroutes.h \
 #@author lauro
-MSDevice_SignDetector.cpp MSDevice_SignDetector.h
+MSDevice_POIDetector.cpp MSDevice_POIDetector.h

@@ -44,7 +44,7 @@
 #include "MSDevice_FCD.h"
 
 // @author lauro
-#include "MSDevice_SignDetector.h"
+#include "MSDevice_POIDetector.h"
 
 
 // ===========================================================================
@@ -71,7 +71,7 @@ MSDevice::insertOptions(OptionsCont& oc) {
     MSDevice_Bluelight::insertOptions(oc);
     MSDevice_FCD::insertOptions(oc);
 	// @author lauro
-	MSDevice_SignDetector::insertOptions(oc);
+	MSDevice_POIDetector::insertOptions(oc);
 
 }
 
@@ -99,7 +99,7 @@ MSDevice::buildVehicleDevices(SUMOVehicle& v, std::vector<MSDevice*>& into) {
     MSDevice_Bluelight::buildVehicleDevices(v, into);
     MSDevice_FCD::buildVehicleDevices(v, into);
     // @author lauro
-    MSDevice_SignDetector::buildVehicleDevices(v, into);
+    MSDevice_POIDetector::buildVehicleDevices(v, into);
 }
 
 void
