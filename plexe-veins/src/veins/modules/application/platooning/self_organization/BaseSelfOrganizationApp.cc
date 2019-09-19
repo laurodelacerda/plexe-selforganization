@@ -41,6 +41,9 @@ void BaseSelfOrganizationApp::initialize(int stage)
 
         signCheck = new cMessage("signCheck");
 
+        maneuverStatsCheck = new cMessage("maneuverStatsCheck");
+        scheduleAt(rounded, maneuverStatsCheck);
+
     }
 
 }
@@ -56,13 +59,15 @@ BaseSelfOrganizationApp::~BaseSelfOrganizationApp()
     safeJoinCheck = nullptr;
     cancelAndDelete(signCheck);
     signCheck = nullptr;
+    cancelAndDelete(maneuverStatsCheck);
+    maneuverStatsCheck = nullptr;
 //    delete map ;
 
 }
 
 void BaseSelfOrganizationApp::handleSelfMsg(cMessage* msg)
 {
-    // A cada 100 ms, atualiza-se a posição do veículo no mapa
+    // Every 100 ms we update vehicle position in container
     if (msg == positionUpdateMsg)
     {
         Plexe::VEHICLE_DATA data;
@@ -73,11 +78,11 @@ void BaseSelfOrganizationApp::handleSelfMsg(cMessage* msg)
         scheduleAt(simTime() + SimTime(100, SIMTIME_MS), positionUpdateMsg);
     }
 
-//    if (msg == printCheck)
-//    {
-//        printInfo();
-//        scheduleAt(simTime() + SimTime(100, SIMTIME_MS) + 2, printCheck);
-//    }
+    if (msg == printCheck)
+    {
+        printInfo();
+        scheduleAt(simTime() + SimTime(100, SIMTIME_MS) + 2, printCheck);
+    }
 
     if (msg == safeJoinCheck)
     {
@@ -89,6 +94,14 @@ void BaseSelfOrganizationApp::handleSelfMsg(cMessage* msg)
     {
         onRoadSignTracking();
     }
+
+    if (msg == maneuverStatsCheck)
+    {
+    	collectStats();
+    	scheduleAt(simTime() + SimTime(100, SIMTIME_MS), maneuverStatsCheck);
+    }
+
+    GeneralPlatooningApp::handleSelfMsg(msg);
 }
 
 void BaseSelfOrganizationApp::onPlatoonBeacon(const PlatooningBeacon* pb)
@@ -230,36 +243,47 @@ void BaseSelfOrganizationApp::onRoadSignTracking()
 
         if (dist != DBL_MAX)
             distances.push_back(dist);
+//        else // Road Sign is behind
+//        {
+//
+//        }
+
     }
 
     double nearest_blockage = 0;
 
     if (distances.size() > 0)
-        nearest_blockage = *std::max_element(distances.begin(), distances.end());
+        nearest_blockage = *std::min_element(distances.begin(), distances.end());
     else
         blocking_distance = DistanceToBlockage::NONE;
 
-    if (nearest_blockage > DISTANCE_SAFE)
-        blocking_distance = DistanceToBlockage::D_SAFE;
-    else if ((nearest_blockage < DISTANCE_CAUTIOUS) and (nearest_blockage > DISTANCE_DANGEROUS))
-        blocking_distance = DistanceToBlockage::D_CAUTIOUS;
-    else if (nearest_blockage < DISTANCE_DANGEROUS)
-        blocking_distance = DistanceToBlockage::D_DANGEROUS;
-    else
-        blocking_distance = DistanceToBlockage::NONE;
+//    if (nearest_blockage > DISTANCE_SAFE)
+//        blocking_distance = DistanceToBlockage::D_SAFE;
+//    else if ((nearest_blockage < DISTANCE_CAUTIOUS) and (nearest_blockage > DISTANCE_DANGEROUS))
+//        blocking_distance = DistanceToBlockage::D_CAUTIOUS;
+//    else if (nearest_blockage < DISTANCE_DANGEROUS)
+//        blocking_distance = DistanceToBlockage::D_DANGEROUS;
+//    else
+//        blocking_distance = DistanceToBlockage::NONE;
 
-    if (blocking_distance != DistanceToBlockage::NONE)
-    {
+
+    bool blocked_lane = std::find(blockedLanes.begin(),
+    		  	  	   	   	   	  blockedLanes.end(),
+								  traciVehicle->getLaneIndex()) != blockedLanes.end();
+
+//    if ((blocked_lane) and (blocking_distance != DistanceToBlockage::NONE))
+	if (blocked_lane)
         inDanger = true;
-
-        if (!signCheck->isScheduled())
-            scheduleAt(simTime() + SimTime(TIMER_ROAD_SIGN, SIMTIME_MS), signCheck);
-    }
     else
     {
         inDanger = false;
         cancelEvent(signCheck);
     }
+
+    // Check again
+    if (!signCheck->isScheduled())
+		scheduleAt(simTime() + SimTime(TIMER_ROAD_SIGN, SIMTIME_MS), signCheck);
+
 }
 
 void BaseSelfOrganizationApp::fillRoadSignMessage(RoadSignWarning* msg, std::string sign_id, std::string sign_type, int lane_index, double posX, double posY)
@@ -282,19 +306,19 @@ void BaseSelfOrganizationApp::updateFlags()
     bool lane_leader = isLaneLeader(myId);
     bool lane_safe   = isLaneSafe(myId);
 
-    if ((lane_leader) && (lane_safe))
+    if ((lane_leader) && (lane_safe)) 			// Safe Leader
     {
 //        role = PlatoonRole::LEADER;
         inDanger = false;
         findHost()->getDisplayString().updateWith("r=8,green");
     }
-    else if ((lane_leader) && (!lane_safe))
+    else if ((lane_leader) && (!lane_safe))		// Unsafe Leader
     {
         role = PlatoonRole::UNSAFE_LEADER;
         inDanger = true;
         findHost()->getDisplayString().updateWith("r=8,red");
     }
-    else if ((!lane_leader) && (lane_safe))
+    else if ((!lane_leader) && (lane_safe)) 	// Safe Follower
     {
         role = PlatoonRole::FOLLOWER;
         inDanger = false;
@@ -302,7 +326,7 @@ void BaseSelfOrganizationApp::updateFlags()
     }
     else
     {
-        role = PlatoonRole::UNSAFE_FOLLOWER;
+        role = PlatoonRole::UNSAFE_FOLLOWER;	// Unsafe Follower
         inDanger = true;
         findHost()->getDisplayString().updateWith("r=0,gray");
     }
@@ -668,10 +692,13 @@ int BaseSelfOrganizationApp::getSafestLaneIndex()
 
 int BaseSelfOrganizationApp::getSafestLaneLeader()
 {
-    nborCoord[this->getSafestLaneIndex()].at(0).getId();
+	if (nborCoord[this->getSafestLaneIndex()].size() > 0)
+		return nborCoord[this->getSafestLaneIndex()].at(0).getId();
+	else
+		return -1;
 }
 
-std::vector<int> BaseSelfOrganizationApp::getFormation(int laneIndex)
+std::vector<int> BaseSelfOrganizationApp::getMapFormation(int laneIndex)
 {
     std::vector<int> formation;
 

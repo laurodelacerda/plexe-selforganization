@@ -33,7 +33,9 @@ void GeneralPlatooningApp::initialize(int stage)
 
     if (stage == 1) {
         // connect maneuver application to protocol
-        protocol->registerApplication(MANEUVER_TYPE, gate("lowerLayerIn"), gate("lowerLayerOut"), gate("lowerControlIn"), gate("lowerControlOut"));
+        protocol->registerApplication(MANEUVER_TYPE,
+        							  gate("lowerLayerIn"), gate("lowerLayerOut"),
+									  gate("lowerControlIn"), gate("lowerControlOut"));
 
 //        std::string joinManeuverName = par("joinManeuver").stdstringValue();
 //        if (joinManeuverName == "JoinAtBack")

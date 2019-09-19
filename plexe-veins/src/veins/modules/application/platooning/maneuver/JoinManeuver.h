@@ -31,6 +31,8 @@
 #include "veins/modules/application/platooning/messages/HandoffLeadershipResponse_m.h"
 #include "veins/modules/application/platooning/messages/LeadershipUpdate_m.h"
 #include "veins/modules/application/platooning/messages/SplitFormation_m.h"
+#include "veins/modules/application/platooning/messages/InitPlatoon_m.h"
+#include "veins/modules/application/platooning/messages/InitPlatoonAck_m.h"
 
 struct JoinManeuverParameters {
     int platoonId;
@@ -184,6 +186,10 @@ protected:
     virtual void handleLeadershipUpdate(const LeadershipUpdate* msg) = 0;
 
     virtual void handleSplitFormation(const SplitFormation* msg) = 0;
+
+    virtual void handleInitPlatoon(const InitPlatoon* msg) = 0;
+
+    virtual void handleInitPlatoonAck(const InitPlatoonAck* msg) = 0;
 
 };
 

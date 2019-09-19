@@ -23,8 +23,6 @@
 #include <memory>
 
 #include "veins/modules/application/platooning/apps/BaseApp.h"
-//#include "veins/modules/application/platooning/maneuver/JoinManeuver.h"
-//#include "veins/modules/application/platooning/maneuver/JoinAtBack.h"
 
 #include "veins/modules/application/platooning/messages/ManeuverMessage_m.h"
 #include "veins/modules/application/platooning/messages/UpdatePlatoonFormation_m.h"
@@ -64,8 +62,26 @@ public:
     /** d'tor for GeneralPlatooningApp */
     virtual ~GeneralPlatooningApp();
 
+    virtual void collectStats(){}
+
     // Sets maneuvering status of other vehicles
     void setManeuverStatus(int veh_id, PlatoonManeuver maneuver) {}
+
+    virtual bool isLaneSafe(int vehicleId)
+    {
+    	return true;
+    }
+
+    virtual bool isLaneLeader(int vehicleId)
+    {
+    	return false;
+    }
+
+    virtual std::vector<int> getMapFormation(int laneIndex)
+	{
+    	std::vector<int> formation;
+    	return formation;
+	}
 
     // Obtains the best available entry position for joining vehicles
     virtual int getBestAvailableEntryPosition(int joiner_id)

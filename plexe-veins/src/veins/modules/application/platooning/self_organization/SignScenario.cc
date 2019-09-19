@@ -124,16 +124,16 @@ void SignScenario::receiveSignal(cComponent* source, simsignal_t signalID, cObje
         std::string lane_index_str;
         std::string range_str;
 
-        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignId", sign_id);
+        traciVehicle->getCustomParameter("device.poiDetector.lastPOIId", sign_id);
 
         if (lastSignId != sign_id)
 		{
 			lastSignId = sign_id;
 
-	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignShape", sign_type);
-	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLane", lane_id);
-	        traciVehicle->getCustomParameter("device.signDetector.lastRoadSignLaneIndex", lane_index_str);
-	        traciVehicle->getCustomParameter("device.signDetector.range", range_str);
+	        traciVehicle->getCustomParameter("device.poiDetector.lastPOIShape", 	sign_type);
+	        traciVehicle->getCustomParameter("device.poiDetector.lastPOILane", 		lane_id);
+	        traciVehicle->getCustomParameter("device.poiDetector.lastPOILaneIndex", lane_index_str);
+	        traciVehicle->getCustomParameter("device.poiDetector.range", 			range_str);
 	        lane_index = std::atoi(lane_index_str.c_str());
 	        sign_range = std::atof(range_str.c_str());
 

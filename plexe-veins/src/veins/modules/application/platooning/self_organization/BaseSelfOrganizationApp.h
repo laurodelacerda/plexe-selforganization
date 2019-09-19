@@ -28,7 +28,7 @@
 #define DISTANCE_DANGEROUS  50
 
 // Cronômetros em ms
-#define TIMER_ROAD_SIGN    100 // em ms
+#define TIMER_ROAD_SIGN    100 // ms
 
 /**
  * General purpose application for Self-Organizing Platoons
@@ -46,6 +46,10 @@ public:
         : inDanger(false),
           blocking_distance(DistanceToBlockage::NONE)
     {
+    	printCheck = 0;
+    	safeJoinCheck = 0;
+    	signCheck = 0;
+    	positionUpdateMsg = 0;
     }
 
     /** d'tor for BaseSelfOrganizationApp */
@@ -55,16 +59,6 @@ public:
 
     // Decides what to do when a road sign is detected
     void onRoadSignDetection(std::string sign_id, std::string sign_type, int lane_index, double range);
-
-    bool isInDanger() const
-    {
-        return inDanger;
-    }
-
-    void setInDanger(bool inDanger)
-    {
-        this->inDanger = inDanger;
-    }
 
 
 protected:
@@ -121,13 +115,20 @@ protected:
     // Detects if vehicle is the leader of the current lane
     bool isLaneLeader(int vehicleId);
 
+    // Is this vehicle in danger?
+    bool isInDanger() const
+    {
+        return inDanger;
+    }
+
+
     // Detects which is the safest lane
     int getSafestLaneIndex();
 
     // Gets the id of the leader from the safest lane detected
     int getSafestLaneLeader();
 
-    std::vector<int> getFormation(int laneIndex);
+    std::vector<int> getMapFormation(int laneIndex);
 
     std::vector<int> getLaneLeaders();
 
@@ -192,6 +193,9 @@ protected:
 
     // Event: Road Signs Distance Calculation
     cMessage* signCheck;
+
+    // Event: Collect maneuver statistics
+    cMessage* maneuverStatsCheck;
 
 
     // Distance a vehicle should consider to move before a road constraint

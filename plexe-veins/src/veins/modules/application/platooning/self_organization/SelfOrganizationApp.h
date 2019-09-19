@@ -20,6 +20,7 @@
 
 #include "veins/modules/application/platooning/maneuver/JoinManeuver.h"
 #include "veins/modules/application/platooning/maneuver/DynamicJoin.h"
+#include "veins/modules/application/platooning/maneuver/ClusterJoin.h"
 
 // Timers to adapt longitudinal position
 #define TIMER_JOIN_AT_BACK       100
@@ -44,6 +45,8 @@ public:
 
     virtual void initialize(int stage);
 
+    void collectStats();
+
     virtual void onPlatoonBeacon(const PlatooningBeacon* pb);
 
     virtual void onManeuverMessage(ManeuverMessage* mm);
@@ -56,6 +59,7 @@ public:
 
     virtual bool isJoinAllowed(int position = -1);
 
+    // Inits timer to adjust vehicular longitudinal dynamics in the maneuver
     virtual void adjustToManeuver();
 
     virtual void startJoinManeuver(int platoonId, int leaderId, int position);
@@ -74,10 +78,21 @@ protected:
 
     // Maneuver: Object that controls maneuver status
 //    JoinManeuver* maneuverControl;
-    DynamicJoin *maneuverControl;
+    DynamicJoin* maneuverControl;
+//    ClusterJoin* maneuverControl;
 
     // Event: Join maneuver adjustment
     cMessage* join_adjust;
+
+
+    // Statistics
+    simtime_t startTimeManeuver;
+    simtime_t totalTimeManeuver;
+    simtime_t totalTimeAdjusts;
+    simtime_t totalTimeManAdjusts;
+    double totalDistanceManeuver;
+    cOutVector accelerationManeuverOut;
+
 
 
 };

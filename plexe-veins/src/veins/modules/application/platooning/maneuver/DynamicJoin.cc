@@ -21,7 +21,8 @@ using namespace Veins;
 
 DynamicJoin::DynamicJoin(GeneralPlatooningApp* app)
     : JoinManeuver(app),
-      joinManeuverState(JoinManeuverState::IDLE)
+      joinManeuverState(JoinManeuverState::IDLE),
+	  updatePlatoonData(false)
 {
     // TODO Auto-generated constructor stub
 }
@@ -76,14 +77,22 @@ void DynamicJoin::startManeuver(const void* parameters)
 
 void DynamicJoin::onPlatoonBeacon(const PlatooningBeacon* pb)
 {
-//    std::cout << " > Vehicle: " << positionHelper->getId() << " - onPlatoonBeacon from "<< pb->getVehicleId() << std::endl;
+//	std::cout << " > Vehicle: " << positionHelper->getId() << " - onPlatoonBeacon from "<< pb->getVehicleId() << std::endl;
 
-    if ((joinManeuverState == JoinManeuverState::J_MOVE_IN_POSITION) or (joinManeuverState == JoinManeuverState::J_ADJUST))
+    bool inManeuver = app->isInManeuver();
+    if (!inManeuver and updatePlatoonData)
+    {
+    	updatePlatoonParameters();
+    	updatePlatoonData = false;
+    }
+
+    if (joinManeuverState == JoinManeuverState::J_MOVE_IN_POSITION) // Joiner at back
     {
             // check correct role
-            if ((app->getPlatoonRole() != PlatoonRole::JOINER)        and
-                (app->getPlatoonRole() != PlatoonRole::UNSAFE_LEADER) and
-                (app->getPlatoonRole() != PlatoonRole::FOLLOWER)) return;
+            if (app->getPlatoonRole() != PlatoonRole::JOINER)       // and
+//                (app->getPlatoonRole() != PlatoonRole::UNSAFE_LEADER) and
+//                (app->getPlatoonRole() != PlatoonRole::FOLLOWER))
+            	return;
 
             // if the message comes from the leader
             if (pb->getVehicleId() == targetPlatoonData->newFormation.at(0))
@@ -112,19 +121,35 @@ void DynamicJoin::onPlatoonBeacon(const PlatooningBeacon* pb)
                 // if we are in position, tell the leader about that
                 if (distance < PLATOON_ZONE) // TODO fixed value? make dependent on controller and headway time
                 {
-                    if (joinManeuverState == JoinManeuverState::J_ADJUST)
-                    {
-                        traciVehicle->setActiveController(Plexe::CACC);
-                        return;
-                    }
-
                     // send move to position response to confirm the parameters
-                    MoveToPositionAck* ack = createMoveToPositionAck(positionHelper->getId(), positionHelper->getExternalId(), targetPlatoonData->platoonId, targetPlatoonData->platoonLeader, targetPlatoonData->platoonSpeed, targetPlatoonData->platoonLane, targetPlatoonData->newFormation);
+                    MoveToPositionAck* ack = createMoveToPositionAck(positionHelper->getId(), positionHelper->getExternalId(),
+                    		targetPlatoonData->platoonId, targetPlatoonData->platoonLeader, targetPlatoonData->platoonSpeed,
+							targetPlatoonData->platoonLane, targetPlatoonData->newFormation);
+
                     app->sendUnicast(ack, targetPlatoonData->newFormation.at(0));
                     joinManeuverState = JoinManeuverState::J_WAIT_JOIN;
                 }
             }
     }
+    else if ((joinManeuverState == JoinManeuverState::J_WAIT_L_HANDOFF) or (joinManeuverState == JoinManeuverState::J_ADJUST)) // Ex-leader (JaF)
+    {
+        if (pb->getVehicleId() == targetPlatoonData->newFormation.at(0))
+        {
+        	if (pb->getLaneIndex() == traciVehicle->getLaneIndex()) // When the new leader finally change lane
+        	{
+        		traciVehicle->setActiveController(Plexe::CACC);
+        		joinManeuverState = JoinManeuverState::IDLE;
+        	}
+        }
+    }
+//    else if (joinManeuverState == L_WAIT_J_HANDOFF) // Current leader
+//    {
+//        if (pb->getVehicleId() == targetPlatoonData->newFormation.at(0))
+//        {
+//
+//        }
+//    }
+
 }
 
 void DynamicJoin::handleJoinPlatoonRequest(const JoinPlatoonRequest* msg)
@@ -154,7 +179,7 @@ void DynamicJoin::handleJoinPlatoonRequest(const JoinPlatoonRequest* msg)
 
     app->setPlatoonRole(PlatoonRole::LEADER);
     app->setInManeuver(false); // NOTE Leader should not be in maneuver
-    traciVehicle->setFixedLane(traciVehicle->getLaneIndex());   // Disable lane changing
+    traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
 
     positionHelper->setPlatoonId(positionHelper->getId());
     positionHelper->setLeaderId(positionHelper->getId());
@@ -190,8 +215,14 @@ void DynamicJoin::handleJoinPlatoonRequest(const JoinPlatoonRequest* msg)
 		joinerData->newFormation.push_back(positionHelper->getId());
 
     // Add joiner
-    if (position == 0) joinerData->newFormation.insert(joinerData->newFormation.begin(), joinerData->joinerId);
-    else if (position == positionHelper->getPlatoonSize()) joinerData->newFormation.push_back(joinerData->joinerId);
+    if (position == 0)
+    {
+    	joinerData->newFormation.insert(joinerData->newFormation.begin(), joinerData->joinerId);
+    }
+    else if (position == positionHelper->getPlatoonSize())
+    {
+    	joinerData->newFormation.push_back(joinerData->joinerId);
+    }
     else // TODO Join at the middle
     {
 //        int front_id = joinerData->newFormation.at(position);
@@ -225,6 +256,7 @@ void DynamicJoin::handleJoinPlatoonRequest(const JoinPlatoonRequest* msg)
                                                joinerData->newFormation);
     app->sendUnicast(mtp, joinerData->joinerId);
 
+//    app->setInManeuver(true);
     joinManeuverState = JoinManeuverState::L_WAIT_JOINER_IN_POSITION;
 }
 
@@ -243,6 +275,7 @@ void DynamicJoin::handleJoinPlatoonResponse(const JoinPlatoonResponse* msg)
         joinManeuverState = JoinManeuverState::J_WAIT_INFORMATION;
         // disable lane changing during maneuver
         traciVehicle->setFixedLane(traciVehicle->getLaneIndex());
+        app->setInManeuver(true);
     }
     else
         abortManeuver();
@@ -255,8 +288,8 @@ void DynamicJoin::handleMoveToPosition(const MoveToPosition* msg)
 
 	// Assertions
     if (joinManeuverState != JoinManeuverState::J_WAIT_INFORMATION) return;
-    if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
-    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
+    if (msg->getPlatoonId() != targetPlatoonData->platoonId) 		return;
+    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) 	return;
 
     // Save platoon data
     targetPlatoonData->from(msg);
@@ -279,7 +312,6 @@ void DynamicJoin::handleMoveToPosition(const MoveToPosition* msg)
         return;
     }
 
-    app->setInManeuver(true);
     app->setPlatoonRole(PlatoonRole::JOINER);
     moveToPosition();
 }
@@ -303,7 +335,10 @@ void DynamicJoin::moveToPosition()
             if (traciVehicle->getLaneIndex() != targetPlatoonData->platoonLane)
                 traciVehicle->setFixedLane(targetPlatoonData->platoonLane, false);
 
-            traciVehicle->setCACCConstantSpacing(15);
+            // Vary the constant spacing
+//            traciVehicle->setCACCConstantSpacing(15);
+            traciVehicle->setFixedAcceleration(0, FIXED_DECELERATION);
+
             traciVehicle->setLeaderVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed);
             traciVehicle->setFrontVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed, 15);
             traciVehicle->setCruiseControlDesiredSpeed(targetPlatoonData->platoonSpeed + (30 / 3.6));
@@ -318,12 +353,10 @@ void DynamicJoin::moveToPosition()
         }
         else if (app->getOngoingManeuver() == PlatoonManeuver::JOIN_AT_FRONT)
         {
-            if (traciVehicle->getLaneIndex() != targetPlatoonData->platoonLane)
-                traciVehicle->setFixedLane(targetPlatoonData->platoonLane, false);
-
-            traciVehicle->setActiveController(Plexe::ACC);
+        	traciVehicle->setFixedAcceleration(0, FIXED_ACCELERATION);
             traciVehicle->setCruiseControlDesiredSpeed(targetPlatoonData->platoonSpeed);
-            traciVehicle->setSpeed(targetPlatoonData->platoonSpeed);
+//            traciVehicle->setSpeed(targetPlatoonData->platoonSpeed);
+//            traciVehicle->setFixedAcceleration(2, acceleration);
 
             HandoffLeadershipRequest* req = createHandoffLeadershipRequest(positionHelper->getId(), positionHelper->getExternalId(),
                                             targetPlatoonData->platoonId, targetPlatoonData->platoonLeader, traciVehicle->getLaneIndex(),
@@ -338,13 +371,15 @@ void DynamicJoin::moveToPosition()
     }
     else
     {
+        // TODO Find out optimum acceleration (Vehicular Dynamics)
+
         if (app->getOngoingManeuver() == PlatoonManeuver::JOIN_AT_BACK)
         {
             opt_speed = (platoon_speed * 2) / 3 ;
-            // TODO Vehicular Dynamics Verificar qual desaceleração é a mais adequada
+
             if (my_speed > opt_speed)
-                traciVehicle->slowDown(data.speed - 1, 0);
-//                traciVehicle->setFixedAcceleration(1, FIXED_DECELERATION);
+//                traciVehicle->slowDown(data.speed - 1, 0);
+                traciVehicle->setFixedAcceleration(1, FIXED_DECELERATION);
 
         }
         else if (app->getOngoingManeuver() == PlatoonManeuver::JOIN_AT_FRONT)
@@ -352,8 +387,8 @@ void DynamicJoin::moveToPosition()
             opt_speed = platoon_speed + (platoon_speed/3) ;
 
             if (my_speed < opt_speed)
-                traciVehicle->setSpeed(data.speed + 1);
-//                traciVehicle->setFixedAcceleration(1, FIXED_ACCELERATION);
+//                traciVehicle->setSpeed(data.speed + 1);
+                traciVehicle->setFixedAcceleration(1, FIXED_ACCELERATION);
         }
 
         app->adjustToManeuver();
@@ -369,146 +404,29 @@ void DynamicJoin::moveToPosition()
     }
 }
 
-void DynamicJoin::handleHandoffLeadershipRequest(const HandoffLeadershipRequest* msg)
-{
-	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleHandoffLeadershipRequest" << std::endl;
-
-    if (app->getPlatoonRole() != PlatoonRole::LEADER) return;
-//    if (joinManeuverState != JoinManeuverState::L_WAIT_JOINER_IN_POSITION) return;
-    if (msg->getPlatoonId() != positionHelper->getPlatoonId()) return;
-//    if (msg->getVehicleId() != joinerData->joinerId) return;
-
-    // TODO Analisar permissão com maior criterio, verificando se veículo está mesmo posicionado à frente
-    bool permission = true;
-
-    // Handoff leadership
-
-    if (permission)
-    {
-    	// Formation with a new leader
-    	std::vector<int> formation = positionHelper->getPlatoonFormation();
-//    	formation.insert(formation.begin(), joinerData->joinerId);
-    	formation.insert(formation.begin(), msg->getVehicleId());
-    	positionHelper->setPlatoonFormation(formation);
-
-    	HandoffLeadershipResponse* res = createHandoffLeadershipResponse(
-    			positionHelper->getId(), positionHelper->getExternalId(), positionHelper->getPlatoonId(), msg->getVehicleId(),
-				permission, positionHelper->getPlatoonLane(), positionHelper->getPlatoonFormation());
-
-    	app->sendUnicast(res, msg->getVehicleId());
-		app->setPlatoonRole(PlatoonRole::FOLLOWER);
-//		joinManeuverState = JoinManeuverState::L_WAIT_J_HANDOFF;
-		joinManeuverState = JoinManeuverState::J_ADJUST;
-    }
-
-}
-
-void DynamicJoin::handleHandoffLeadershipResponse(const HandoffLeadershipResponse* msg)
-{
-	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleHandoffLeadershipResponse" << std::endl;
-    if (app->getPlatoonRole() != PlatoonRole::JOINER) return;
-    if (joinManeuverState != JoinManeuverState::J_WAIT_L_HANDOFF) return;
-    if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
-    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
-
-
-    bool permission = msg->getPermitted();
-
-    if (!permission)
-    {
-        abortManeuver();
-        return;
-    }
-
-//    targetPlatoonData->from(msg);
-//    positionHelper->setLeaderId(positionHelper->getId());
-    positionHelper->setPlatoonLane(targetPlatoonData->platoonLane);
-    positionHelper->setPlatoonSpeed(targetPlatoonData->platoonSpeed);
-    positionHelper->setPlatoonId(positionHelper->getId());
-    positionHelper->setLeaderId(positionHelper->getId());
-
-    std::vector<int> formation;
-    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) formation.push_back(msg->getNewPlatoonFormation(i));
-//    positionHelper->setPlatoonFormation(targetPlatoonData->newFormation);
-    positionHelper->setPlatoonFormation(formation);
-
-
-//    traciVehicle->setFixedAcceleration(1, 0);
-//    traciVehicle->setFixedAcceleration(true, 0);
-    traciVehicle->setFixedLane(msg->getPlatoonLane(), false);
-    traciVehicle->setSpeed(targetPlatoonData->platoonSpeed);
-//    traciVehicle->setSpeed(msg->getPlatoonSpeed());
-    traciVehicle->setMaxSpeed(targetPlatoonData->platoonSpeed); //  + (1/3*targetPlatoonData->platoonSpeed)
-
-
-    app->setPlatoonRole(PlatoonRole::LEADER);
-    joinManeuverState = JoinManeuverState::IDLE;
-    app->setInManeuver(false);
-
-
-    // Anunciar o novo líder
-    for (unsigned int i = 1; i < positionHelper->getPlatoonSize(); i++)
-    {
-        LeadershipUpdate* dup = createLeadershipUpdate(positionHelper->getId(),
-                positionHelper->getExternalId(), positionHelper->getId(), -1,
-                positionHelper->getPlatoonSpeed(), traciVehicle->getLaneIndex(),
-                positionHelper->getPlatoonFormation());
-
-        int dest = positionHelper->getMemberId(i);
-        dup->setDestinationId(dest);
-        app->sendUnicast(dup, dest);
-    }
-
-}
-
-void DynamicJoin::handleLeadershipUpdate(const LeadershipUpdate* msg)
-{
-//    if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
-//    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
-	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleLeadershipUpdate" << std::endl;
-
-	if (app->getPlatoonRole() != PlatoonRole::FOLLOWER) return;
-
-    targetPlatoonData.reset(new TargetPlatoonData());
-    targetPlatoonData->from(msg);
-
-    positionHelper->setPlatoonId(targetPlatoonData->platoonLeader);
-    positionHelper->setLeaderId(targetPlatoonData->platoonLeader);
-//    positionHelper->setPlatoonLane(targetPlatoonData->platoonLane);
-    positionHelper->setPlatoonSpeed(targetPlatoonData->platoonSpeed);
-
-//    traciVehicle->setCACCConstantSpacing(15);
-    traciVehicle->setLeaderVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed + 1/3*targetPlatoonData->platoonSpeed);
-    traciVehicle->setFrontVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed, 15);
-    traciVehicle->setCruiseControlDesiredSpeed(targetPlatoonData->platoonSpeed + (30 / 3.6));
-    traciVehicle->setActiveController(Plexe::FAKED_CACC);
-
-    std::vector<int> formation;
-    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) formation.push_back(msg->getNewPlatoonFormation(i));
-//    positionHelper->setPlatoonFormation(targetPlatoonData->newFormation);
-    positionHelper->setPlatoonFormation(formation);
-
-//    app->setInManeuver(true); // Vehicles are not in maneuver, they are ajusting their position to take advantage of platoon
-    joinManeuverState = JoinManeuverState::J_ADJUST;
-
-}
-
 void DynamicJoin::handleMoveToPositionAck(const MoveToPositionAck* msg)
 {
 	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleMoveToPositionAck" << std::endl;
     if (app->getPlatoonRole() != PlatoonRole::LEADER) return;
-    if (joinManeuverState != JoinManeuverState::L_WAIT_JOINER_IN_POSITION) return;
+//    if (joinManeuverState != JoinManeuverState::L_WAIT_JOINER_IN_POSITION) return;
     if (msg->getPlatoonId() != positionHelper->getPlatoonId()) return;
 
 //    TODO Tratar o caso de ter múltiplos joiners
 //    if (msg->getVehicleId() != joinerData->joinerId) return;
 
-    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) ASSERT(msg->getNewPlatoonFormation(i) == joinerData->newFormation.at(i));
+//    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) ASSERT(msg->getNewPlatoonFormation(i) == joinerData->newFormation.at(i));
 
     // the joiner is now in position and is ready to join
 
     // tell the joiner to join the platoon
-    JoinFormation* jf = createJoinFormation(positionHelper->getId(), positionHelper->getExternalId(), positionHelper->getPlatoonId(), joinerData->joinerId, positionHelper->getPlatoonSpeed(), traciVehicle->getLaneIndex(), joinerData->newFormation);
+//    JoinManeuver::createJoinFormation(int vehicleId, std::string externalId, int platoonId,
+// 										int destinationId, double platoonSpeed, int platoonLane,
+//    									const std::vector<int>& newPlatoonFormation)
+
+    JoinFormation* jf = createJoinFormation(positionHelper->getId(), positionHelper->getExternalId(), positionHelper->getPlatoonId(),
+    										joinerData->joinerId, positionHelper->getPlatoonSpeed(), traciVehicle->getLaneIndex(),
+											joinerData->newFormation);
+
     app->sendUnicast(jf, joinerData->joinerId);
     joinManeuverState = JoinManeuverState::L_WAIT_JOINER_TO_JOIN;
 
@@ -519,7 +437,7 @@ void DynamicJoin::handleJoinFormation(const JoinFormation* msg)
 	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleJoinFormation" << std::endl;
     // NOTE Alterado para aceitar veículos que entram no pelotão e passam a ser "FOLLOWER"
 //    if ((app->getPlatoonRole() != PlatoonRole::JOINER) || app->getPlatoonRole() != PlatoonRole::FOLLOWER) return;
-    if (joinManeuverState != JoinManeuverState::J_WAIT_JOIN) return;
+//    if (joinManeuverState != JoinManeuverState::J_WAIT_JOIN) return;
     if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
     if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
 
@@ -529,7 +447,7 @@ void DynamicJoin::handleJoinFormation(const JoinFormation* msg)
     // switch from faked CACC to real CACC
     traciVehicle->setActiveController(Plexe::CACC);
     // set spacing to 5 meters to get close to the platoon
-    traciVehicle->setCACCConstantSpacing(5);
+//    traciVehicle->setCACCConstantSpacing(5);
 
     // update platoon information
     positionHelper->setPlatoonId(msg->getPlatoonId());
@@ -579,6 +497,179 @@ void DynamicJoin::handleJoinFormationAck(const JoinFormationAck* msg)
     app->setInManeuver(false);
 }
 
+void DynamicJoin::handleHandoffLeadershipRequest(const HandoffLeadershipRequest* msg)
+{
+	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleHandoffLeadershipRequest" << std::endl;
+
+    if (app->getPlatoonRole() != PlatoonRole::LEADER) return;
+//    if (joinManeuverState != JoinManeuverState::L_WAIT_JOINER_IN_POSITION) return;
+    if (msg->getPlatoonId() != positionHelper->getPlatoonId()) return;
+//    if (msg->getVehicleId() != joinerData->joinerId) return;
+
+    // TODO Analisar permissão com maior criterio, verificando se veículo está mesmo posicionado à frente
+    bool permission = true;
+
+    // Handoff leadership
+
+    if (permission) // Formation with a new leader
+    {
+    	std::vector<int> formation = positionHelper->getPlatoonFormation();
+    	formation.insert(formation.begin(), msg->getVehicleId());
+    	positionHelper->setPlatoonFormation(formation);
+
+    	HandoffLeadershipResponse* res = createHandoffLeadershipResponse(
+    			positionHelper->getId(), positionHelper->getExternalId(), positionHelper->getPlatoonId(), msg->getVehicleId(),
+				permission, positionHelper->getPlatoonLane(), positionHelper->getPlatoonFormation());
+
+    	app->sendUnicast(res, msg->getVehicleId());
+		app->setPlatoonRole(PlatoonRole::FOLLOWER);
+		joinManeuverState = JoinManeuverState::J_WAIT_L_HANDOFF;
+//		joinManeuverState = JoinManeuverState::J_ADJUST;
+    }
+
+}
+
+void DynamicJoin::handleHandoffLeadershipResponse(const HandoffLeadershipResponse* msg)
+{
+	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleHandoffLeadershipResponse" << std::endl;
+    if (app->getPlatoonRole() != PlatoonRole::JOINER) return;
+    if (joinManeuverState != JoinManeuverState::J_WAIT_L_HANDOFF) return;
+    if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
+    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
+
+
+    bool permission = msg->getPermitted();
+
+    if (!permission)
+    {
+        abortManeuver();
+        return;
+    }
+
+//    targetPlatoonData->from(msg);
+//    positionHelper->setLeaderId(positionHelper->getId());
+    positionHelper->setPlatoonLane(targetPlatoonData->platoonLane);
+    positionHelper->setPlatoonSpeed(targetPlatoonData->platoonSpeed);
+    positionHelper->setPlatoonId(positionHelper->getId());
+    positionHelper->setLeaderId(positionHelper->getId());
+
+    std::vector<int> formation;
+    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) formation.push_back(msg->getNewPlatoonFormation(i));
+//    positionHelper->setPlatoonFormation(targetPlatoonData->newFormation);
+    positionHelper->setPlatoonFormation(formation);
+
+    // Save data about ex-leader as a joiner
+	joinerData.reset(new JoinerData());
+	joinerData->joinerId   = msg->getVehicleId();
+	joinerData->joinerLane = traciVehicle->getLaneIndex();
+	joinerData->newFormation = formation;
+
+	// Adjust dynamics settings
+//    traciVehicle->setFixedAcceleration(1, 0);
+//    traciVehicle->setFixedAcceleration(true, 0);
+    traciVehicle->setFixedLane(msg->getPlatoonLane(), false);
+//    traciVehicle->setSpeed(targetPlatoonData->platoonSpeed);
+//    traciVehicle->setSpeed(msg->getPlatoonSpeed());
+    traciVehicle->setMaxSpeed(targetPlatoonData->platoonSpeed); //  + (1/3*targetPlatoonData->platoonSpeed)
+
+
+    app->setPlatoonRole(PlatoonRole::LEADER);
+    joinManeuverState = JoinManeuverState::IDLE;
+    app->setInManeuver(false);
+
+
+    // Broadcast the new leader
+    for (unsigned int i = 1; i < positionHelper->getPlatoonSize(); i++)
+    {
+        LeadershipUpdate* dup = createLeadershipUpdate(positionHelper->getId(),
+                positionHelper->getExternalId(), positionHelper->getId(), -1,
+                positionHelper->getPlatoonSpeed(), msg->getPlatoonLane(),
+                positionHelper->getPlatoonFormation());
+
+        int dest = positionHelper->getMemberId(i);
+        dup->setDestinationId(dest);
+        app->sendUnicast(dup, dest);
+    }
+
+}
+
+void DynamicJoin::handleLeadershipUpdate(const LeadershipUpdate* msg)
+{
+//    if (msg->getPlatoonId() != targetPlatoonData->platoonId) return;
+//    if (msg->getVehicleId() != targetPlatoonData->platoonLeader) return;
+	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleLeadershipUpdate" << std::endl;
+
+	if ((app->getPlatoonRole() != PlatoonRole::FOLLOWER) and (app->getPlatoonRole() != PlatoonRole::JOINER)) return;
+	//	if (traciVehicle->getLaneIndex() != msg->getPlatoonLane()) return;
+//	if (app->isInManeuver() != false) return;
+//	if (app->) return;
+
+    targetPlatoonData.reset(new TargetPlatoonData());
+    targetPlatoonData->from(msg);
+
+    updatePlatoonData = true;
+
+//    std::vector<int> formation;
+//    for (unsigned i = 0; i < msg->getNewPlatoonFormationArraySize(); i++) formation.push_back(msg->getNewPlatoonFormation(i));
+
+//    positionHelper->setPlatoonId(targetPlatoonData->platoonLeader);
+//    positionHelper->setLeaderId(targetPlatoonData->platoonLeader);
+//    positionHelper->setPlatoonLane(targetPlatoonData->platoonLane);
+//    positionHelper->setPlatoonSpeed(targetPlatoonData->platoonSpeed);
+//	positionHelper->setPlatoonFormation(formation);
+
+//	pode = true;
+
+//	joinManeuverState = JoinManeuverState::J_ADJUST;
+
+//    traciVehicle->setCACCConstantSpacing(15);
+//    traciVehicle->setLeaderVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed + 1/3*targetPlatoonData->platoonSpeed);
+//    traciVehicle->setFrontVehicleFakeData(0, 0, targetPlatoonData->platoonSpeed, 15);
+//    traciVehicle->setCruiseControlDesiredSpeed(targetPlatoonData->platoonSpeed + (30 / 3.6));
+//    traciVehicle->setActiveController(Plexe::FAKED_CACC);
+//    traciVehicle->setActiveController(Plexe::CACC);
+
+
+
+//    app->setInManeuver(true); // Vehicles are not in maneuver, they are ajusting their position to take advantage of platoon
+
+
+
+    // if vehicles are already at same lane
+//    if (traciVehicle->getLaneIndex() == msg->getPlatoonLane())
+//    {
+//    	traciVehicle->setActiveController(Plexe::CACC);
+//    	app->setPlatoonRole(PlatoonRole::FOLLOWER);
+//    	app->setInManeuver(false);
+//    	joinManeuverState = JoinManeuverState::IDLE;
+//    }
+//    else
+//    {
+//
+//    }
+//    else // if are not in the same lane yet
+//    {
+
+//        joinManeuverState = JoinManeuverState::J_ADJUST;
+//    }
+
+
+}
+
+void DynamicJoin::updatePlatoonParameters()
+{
+	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - updatePlatoonParameters" << std::endl;
+	std::vector<int> formation;
+	for (unsigned i = 0; i < targetPlatoonData->newFormation.size(); i++) formation.push_back(targetPlatoonData->newFormation.at(i));
+
+	positionHelper->setPlatoonId(targetPlatoonData->platoonLeader);
+	positionHelper->setLeaderId(targetPlatoonData->platoonLeader);
+	positionHelper->setPlatoonLane(targetPlatoonData->platoonLane);
+	positionHelper->setPlatoonSpeed(targetPlatoonData->platoonSpeed);
+	positionHelper->setPlatoonFormation(formation);
+
+}
+
 void DynamicJoin::handleSplitFormation(const SplitFormation* msg)
 {
 	std::cout << "(" << simTime() << ")" << " > Vehicle: " << positionHelper->getId() << " - handleSplitFormation" << std::endl;
@@ -599,3 +690,12 @@ void DynamicJoin::handleSplitFormation(const SplitFormation* msg)
 
 }
 
+void DynamicJoin::handleInitPlatoon(const InitPlatoon* msg)
+{
+
+}
+
+void DynamicJoin::handleInitPlatoonAck(const InitPlatoonAck* msg)
+{
+
+}

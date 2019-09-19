@@ -1,6 +1,6 @@
 
-#ifndef DYNAMIC_JOIN_H
-#define DYNAMIC_JOIN_H
+#ifndef CLUSTER_JOIN_H
+#define CLUSTER_JOIN_H
 
 #include <algorithm>
 
@@ -13,16 +13,17 @@
 #define PLATOON_ZONE 30
 #define FIXED_ACCELERATION 2
 #define FIXED_DECELERATION -2
+#define SPEED_CONTROL_FACTOR 2/3
 
 using namespace Veins;
 
-class DynamicJoin : public JoinManeuver {
+class ClusterJoin : public JoinManeuver {
 
 public:
 
-    DynamicJoin(GeneralPlatooningApp* app);
+    ClusterJoin(GeneralPlatooningApp* app);
 
-    virtual ~DynamicJoin();
+    virtual ~ClusterJoin();
 
     virtual void startManeuver(const void* parameters) override;
 
@@ -52,12 +53,9 @@ public:
 
     virtual void moveToPosition();
 
-    virtual void handleInitPlatoon(const InitPlatoon* msg) override ;
+    virtual void handleInitPlatoon(const InitPlatoon* msg) override;
 
-    virtual void handleInitPlatoonAck(const InitPlatoonAck* msg) override ;
-
-    // Update platoon info based on targetPlatoonData
-    void updatePlatoonParameters();
+    virtual void handleInitPlatoonAck(const InitPlatoonAck* msg) override;
 
 protected:
 
@@ -72,7 +70,7 @@ protected:
         J_WAIT_JOIN, ///< The joiner waits for the join permission
         // Leader
         L_WAIT_J_HANDOFF, ///< [JaF] The current leader is waiting for leadership handoff
-//        L_ADJUST,         ///< [JaF] The current leader is waiting for platoon adjustment
+        L_ADJUST,         ///< [JaF] The current leader is waiting for platoon adjustment
         L_WAIT_JOINER_IN_POSITION, ///< The leader waits for the joiner to be in position, the followers made space already
         L_WAIT_JOINER_TO_JOIN, ///< The leader waits for the joiner to join
     };
@@ -189,8 +187,6 @@ protected:
     std::unique_ptr<JoinerData> joinerData;
 
     /** Joiners to join **/
-
-    bool updatePlatoonData;
 
 //    std::map<int, std::vector<int>> joiners;
 

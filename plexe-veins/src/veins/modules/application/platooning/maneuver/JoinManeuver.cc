@@ -56,6 +56,12 @@ void JoinManeuver::onManeuverMessage(const ManeuverMessage* mm)
     else if (const SplitFormation* msg = dynamic_cast<const SplitFormation*>(mm)) {
         handleSplitFormation(msg);
     }
+    else if (const InitPlatoon* msg = dynamic_cast<const InitPlatoon*>(mm)) {
+    	handleInitPlatoon(msg);
+    }
+    else if (const InitPlatoonAck* msg = dynamic_cast<const InitPlatoonAck*>(mm)) {
+    	handleInitPlatoonAck(msg);
+    }
 }
 
 JoinPlatoonRequest* JoinManeuver::createJoinPlatoonRequest(int vehicleId, std::string externalId, int platoonId, int destinationId, int currentLaneIndex, double xPos, double yPos)

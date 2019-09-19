@@ -23,6 +23,17 @@ void SelfOrganizationApp::initialize(int stage)
 {
     BaseSelfOrganizationApp::initialize(stage);
 
+
+    if (stage == 0)
+    {
+    	accelerationManeuverOut.setName("accelerationManeuver");
+    	totalTimeManeuver = 0;
+    	totalTimeAdjusts = 0;
+    	totalTimeManAdjusts = 0;
+    	totalDistanceManeuver = 0;
+    }
+
+
     if (stage == 1)
     {
 //        std::string joinManeuverName = par("joinManeuver").stdstringValue();
@@ -32,7 +43,9 @@ void SelfOrganizationApp::initialize(int stage)
 //            joinManeuver = new JoinAtBackSign(this);
 //        else
 //            throw new cRuntimeError("Invalid join maneuver implementation chosen");
-        maneuverControl = new DynamicJoin(this);
+
+    	maneuverControl = new DynamicJoin(this);
+//        maneuverControl = new ClusterJoin(this);
 
         join_adjust = new cMessage("join_adjust");
     }
@@ -126,7 +139,7 @@ void SelfOrganizationApp::startJoinManeuver(int platoonId, int leaderId, int pos
 
 void SelfOrganizationApp::setupFormation()
 {
-    std::vector<int> formation = getFormation(traciVehicle->getLaneIndex());
+    std::vector<int> formation = getMapFormation(traciVehicle->getLaneIndex());
 
     positionHelper->setPlatoonFormation(formation);
 }
@@ -136,7 +149,7 @@ void SelfOrganizationApp::startManeuverFormation()
     Plexe::VEHICLE_DATA data;
     traciVehicle->getVehicleData(&data);
 
-    std::vector<int> formation = getFormation(traciVehicle->getLaneIndex());
+    std::vector<int> formation = getMapFormation(traciVehicle->getLaneIndex());
     positionHelper->setPlatoonFormation(formation);
 
 //    if (role == PlatoonRole::LEADER)
@@ -178,13 +191,19 @@ void SelfOrganizationApp::startManeuverFormation()
 //            scheduleAt(simTime() + SimTime(100, SIMTIME_MS), safeJoinCheck);
 //    }
 
-    if ((inDanger) and (role != PlatoonRole::LEADER) and (role != PlatoonRole::FOLLOWER))
-    {
-    	int safest_leader = getSafestLaneLeader();
+//    if ((inDanger) and (role != PlatoonRole::LEADER) and (role != PlatoonRole::FOLLOWER))
+//    {
+//    	int safest_lane = getSafestLaneIndex();
+//    	int safest_leader = getSafestLaneLeader();
+//
+//    	if (ongoing_maneuver == PlatoonManeuver::IDLE)
+//			startJoinManeuver(safest_leader, safest_leader, -1);
+//    }
 
-    	if (ongoing_maneuver == PlatoonManeuver::IDLE)
-			startJoinManeuver(safest_leader, safest_leader, -1);
-    }
+	int safest_leader = getSafestLaneLeader();
+
+	if (ongoing_maneuver == PlatoonManeuver::IDLE)
+		startJoinManeuver(safest_leader, safest_leader, -1);
 }
 
 SelfOrganizationApp::~SelfOrganizationApp()
@@ -410,8 +429,31 @@ void SelfOrganizationApp::handleSelfMsg(cMessage* msg)
     BaseSelfOrganizationApp::handleSelfMsg(msg);
 }
 
+void SelfOrganizationApp::collectStats()
+{
+    double distance, relSpeed;
+    Plexe::VEHICLE_DATA data;
+    traciVehicle->getRadarMeasurements(distance, relSpeed);
+    traciVehicle->getVehicleData(&data);
+
+    // If vehicle is in Maneuver
+//    if (!inManeuver) return;
+
+    if (startTimeManeuver == 0)
+    	startTimeManeuver = simTime();
+
+    accelerationManeuverOut.record(data.acceleration);
+
+    // If vehicle is adjusting
+}
+
 void SelfOrganizationApp::printInfo()
 {
+    double distance, relSpeed;
+    Plexe::VEHICLE_DATA data;
+    traciVehicle->getRadarMeasurements(distance, relSpeed);
+    traciVehicle->getVehicleData(&data);
+
     std::string role_str ;
     std::string control_str ;
     std::string join_str;
@@ -466,7 +508,6 @@ void SelfOrganizationApp::printInfo()
 
     // Info about vehicle/platoon
     std::cout << "\n\n@@@Vehicle " << myId << " at " << simTime() << " @@@"
-			 	 << "\nSpeed: " 	   << mobility->getSpeed()
 				 << "\nIn Danger: "    << inDanger
 				 << "\nIn Maneuver: "  << inManeuver
     			 << "\n-------------"
@@ -481,7 +522,13 @@ void SelfOrganizationApp::printInfo()
    				 << "\nHeadway (s): "  << traciVehicle->getACCHeadwayTime()
 				 << "\nSpacing (m): "  << traciVehicle->getCACCConstantSpacing()
 	 	 	 	 << "\n-------------"
-	 	 	 	 <<	"\nJoin status: "	   << join_str;
+			 	 << "\nSpeed: " 	   << data.speed
+				 << "\nAcc: " 		   << data.acceleration
+				 << "\nControl Acc: "  << data.u
+				 << "\nAngle: "		   << data.angle
+				 << "\nDistance: "     << distance
+				 << "\nRel Speed: "    << relSpeed
+	 	 	 	 <<	"\nJoin status: "  << join_str;
 //                 << "\n\n";
 
 
@@ -491,7 +538,7 @@ void SelfOrganizationApp::printInfo()
     {
         std::cout << "\nLane" << "[" << i << "]: " ;
 
-        std::vector<int> formation = getFormation(i);
+        std::vector<int> formation = getMapFormation(i);
         for (auto &j : formation)
             std::cout << j << " ";
     }
